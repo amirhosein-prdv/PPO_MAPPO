@@ -7,8 +7,6 @@ import torch.optim as optim
 from torch.distributions.normal import Normal
 from typing import List
 
-from utils import get_unique_log_dir
-
 
 def layer_init(
     layer: nn.Module, std: float = np.sqrt(2), bias_const: float = 0.0

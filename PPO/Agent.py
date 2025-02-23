@@ -2,9 +2,9 @@ import numpy as np
 import torch as T
 from typing import Optional, Tuple, List
 
-from RolloutBuffer import RolloutBuffer
-from Networks import ActorNetwork, CriticNetwork
-from utils import get_unique_log_dir
+from .RolloutBuffer import RolloutBuffer
+from .Networks import ActorNetwork, CriticNetwork
+from .utils import get_unique_log_dir
 
 
 class Agent:
