@@ -1,4 +1,5 @@
 import os
+import torch as T
 import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.tensorboard import SummaryWriter
@@ -12,6 +13,18 @@ def plot_learning_curve(x: List[float], scores: List[float], figure_file: str) -
     plt.plot(x, running_avg)
     plt.title("Running average of previous 100 scores")
     plt.savefig(figure_file)
+
+
+def anneal_learning_rate(
+    optimizer: T.optim.Optimizer,
+    initial_lr: float,
+    current_step: int,
+    total_steps: int,
+) -> None:
+    """Anneal the learning rate linearly."""
+    lr = initial_lr * (1 - (current_step / float(total_steps)))
+    for param_group in optimizer.param_groups:
+        param_group["lr"] = lr
 
 
 def get_unique_log_dir(base_dir: str) -> str:
