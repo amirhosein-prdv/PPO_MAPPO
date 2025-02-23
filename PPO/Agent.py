@@ -1,5 +1,6 @@
 import numpy as np
 import torch as T
+from typing import Optional, Tuple, List
 
 from RolloutBuffer import RolloutBuffer
 from Networks import ActorNetwork, CriticNetwork
@@ -9,22 +10,22 @@ from utils import get_unique_log_dir
 class Agent:
     def __init__(
         self,
-        state_dim,
-        action_dim,
-        batch_size=64,
-        n_epochs=10,
-        gamma=0.99,
-        gae_lambda=0.95,
-        lr=3e-4,
-        clip_coef=0.2,
-        vf_coef=0.5,
-        ent_coef=0.0,
-        max_grad_norm=0.5,
-        lr_anealing=True,
-        target_kl=None,
-        logger=None,
-        chkpt_dir="./tmp/PPO-Agent",
-    ):
+        state_dim: int,
+        action_dim: int,
+        batch_size: int = 64,
+        n_epochs: int = 10,
+        gamma: float = 0.99,
+        gae_lambda: float = 0.95,
+        lr: float = 3e-4,
+        clip_coef: float = 0.2,
+        vf_coef: float = 0.5,
+        ent_coef: float = 0.0,
+        max_grad_norm: float = 0.5,
+        lr_anealing: bool = True,
+        target_kl: Optional[float] = None,
+        logger: Optional[object] = None,
+        chkpt_dir: str = "./tmp/PPO-Agent",
+    ) -> None:
         self.gamma = gamma
         self.gae_lambda = gae_lambda
 
@@ -67,24 +68,24 @@ class Agent:
         )
         self.memory = RolloutBuffer(batch_size)
 
-    def save_models(self):
+    def save_models(self) -> None:
         print("... saving models ...")
         self.actor.save_checkpoint()
         self.critic.save_checkpoint()
 
-    def load_models(self):
+    def load_models(self) -> None:
         print("... loading models ...")
         self.actor.load_checkpoint()
         self.critic.load_checkpoint()
 
-    def get_value(self, observation):
+    def get_value(self, observation: np.ndarray) -> float:
         state = T.tensor(np.array([observation]), dtype=T.float32).to(self.actor.device)
-
         return self.critic(state).item()
 
-    def get_action(self, observation, action=None):
+    def get_action(
+        self, observation: np.ndarray, action: Optional[T.Tensor] = None
+    ) -> Tuple[np.ndarray, float, float]:
         state = T.tensor(np.array([observation]), dtype=T.float32).to(self.actor.device)
-
         dist = self.actor(state)
         value = self.critic(state)
 
@@ -96,7 +97,7 @@ class Agent:
 
         return action.detach().cpu().numpy().squeeze(), action_logprobs, value
 
-    def learn(self):
+    def learn(self) -> None:
         clipfracs = []
         for _ in range(self.n_epochs):
             # Generate batch data

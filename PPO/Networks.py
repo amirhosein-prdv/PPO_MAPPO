@@ -5,11 +5,14 @@ import torch as T
 import torch.nn as nn
 import torch.optim as optim
 from torch.distributions.normal import Normal
+from typing import List
 
 from utils import get_unique_log_dir
 
 
-def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
+def layer_init(
+    layer: nn.Module, std: float = np.sqrt(2), bias_const: float = 0.0
+) -> nn.Module:
     nn.init.orthogonal_(layer.weight, std)
     nn.init.constant_(layer.bias, bias_const)
     return layer
@@ -18,12 +21,12 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 class ActorNetwork(nn.Module):
     def __init__(
         self,
-        state_dim,
-        action_dim,
-        actor_lr,
-        fc_dims=[256, 256],
-        chkpt_dir="./tmp/PPO-Agent",
-    ):
+        state_dim: int,
+        action_dim: int,
+        actor_lr: float,
+        fc_dims: List[int] = [256, 256],
+        chkpt_dir: str = "./tmp/PPO-Agent",
+    ) -> None:
         super(ActorNetwork, self).__init__()
 
         self.checkpoint_file = os.path.join(chkpt_dir, "actor_torch_ppo")
@@ -43,27 +46,27 @@ class ActorNetwork(nn.Module):
         self.device = T.device("cuda:0" if T.cuda.is_available() else "cpu")
         self.to(self.device)
 
-    def forward(self, state):
+    def forward(self, state: T.Tensor) -> Normal:
         action_mean = self.mean(state)
         action_logstd = self.logstd.expand_as(action_mean).exp()
         dist = Normal(action_mean, action_logstd)
         return dist
 
-    def save_checkpoint(self):
+    def save_checkpoint(self) -> None:
         T.save(self.state_dict(), self.checkpoint_file)
 
-    def load_checkpoint(self):
+    def load_checkpoint(self) -> None:
         self.load_state_dict(T.load(self.checkpoint_file))
 
 
 class CriticNetwork(nn.Module):
     def __init__(
         self,
-        state_dim,
-        critic_lr,
-        fc_dims=[256, 256],
-        chkpt_dir="./tmp/PPO-Agent",
-    ):
+        state_dim: int,
+        critic_lr: float,
+        fc_dims: List[int] = [256, 256],
+        chkpt_dir: str = "./tmp/PPO-Agent",
+    ) -> None:
         super(CriticNetwork, self).__init__()
 
         self.checkpoint_file = os.path.join(chkpt_dir, "critic_torch_ppo")
@@ -82,12 +85,12 @@ class CriticNetwork(nn.Module):
         self.device = T.device("cuda:0" if T.cuda.is_available() else "cpu")
         self.to(self.device)
 
-    def forward(self, state):
+    def forward(self, state: T.Tensor) -> T.Tensor:
         value = self.critic(state)
         return value
 
-    def save_checkpoint(self):
+    def save_checkpoint(self) -> None:
         T.save(self.state_dict(), self.checkpoint_file)
 
-    def load_checkpoint(self):
+    def load_checkpoint(self) -> None:
         self.load_state_dict(T.load(self.checkpoint_file))

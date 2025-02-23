@@ -1,19 +1,31 @@
 import numpy as np
+from typing import List, Tuple
 
 
 class RolloutBuffer:
-    def __init__(self, batch_size):
-        self.states = []
-        self.actions = []
-        self.logprobs = []
-        self.values = []
-        self.next_states = []
-        self.rewards = []
-        self.dones = []
+    def __init__(self, batch_size: int):
+        self.states: List[np.ndarray] = []
+        self.actions: List[np.ndarray] = []
+        self.logprobs: List[np.ndarray] = []
+        self.values: List[np.ndarray] = []
+        self.next_states: List[np.ndarray] = []
+        self.rewards: List[float] = []
+        self.dones: List[bool] = []
 
-        self.batch_size = batch_size
+        self.batch_size: int = batch_size
 
-    def generate_batches(self):
+    def generate_batches(
+        self,
+    ) -> Tuple[
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        List[np.ndarray],
+    ]:
         n_states = len(self.states)
         batch_start = np.arange(0, n_states, self.batch_size)
         indices = np.arange(n_states, dtype=np.int64)
@@ -31,7 +43,16 @@ class RolloutBuffer:
             batches,
         )
 
-    def store(self, state, action, logprobs, values, next_state, reward, done):
+    def store(
+        self,
+        state: np.ndarray,
+        action: np.ndarray,
+        logprobs: np.ndarray,
+        values: np.ndarray,
+        next_state: np.ndarray,
+        reward: float,
+        done: bool,
+    ) -> None:
         self.states.append(state)
         self.actions.append(action)
         self.logprobs.append(logprobs)
@@ -40,7 +61,7 @@ class RolloutBuffer:
         self.rewards.append(reward)
         self.dones.append(done)
 
-    def clear(self):
+    def clear(self) -> None:
         self.states = []
         self.actions = []
         self.logprobs = []
