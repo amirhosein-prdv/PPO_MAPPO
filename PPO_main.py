@@ -31,7 +31,6 @@ if __name__ == "__main__":
     avg_score = 0
 
     n_steps = 0
-
     for eps in range(episode_num):
         state, info = env.reset()
         done = False
@@ -40,15 +39,17 @@ if __name__ == "__main__":
             action, logprob, value = agent.get_action(state)
             next_state, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
-            n_steps += 1
-            logger.update_global_step(n_steps)
             score += reward
             agent.memory.store(state, action, logprob, value, next_state, reward, done)
+
+            n_steps += 1
+            logger.update_global_step(n_steps)
 
             if n_steps % training_interval_step == 0:
                 agent.learn()
                 learn_iters += 1
             state = next_state
+
         score_history.append(score)
         avg_score = np.mean(score_history[-100:])
 
