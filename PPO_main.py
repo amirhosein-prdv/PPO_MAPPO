@@ -9,7 +9,6 @@ def make_env(gym_id, seed: Optional[int] = None):
     def thunk():
         env = gym.make(gym_id)
         env = gym.wrappers.RecordEpisodeStatistics(env)
-
         env = gym.wrappers.ClipAction(env)
         env = gym.wrappers.NormalizeObservation(env)
         env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
@@ -27,11 +26,18 @@ def make_env(gym_id, seed: Optional[int] = None):
 if __name__ == "__main__":
     env = make_env("BipedalWalker-v3")
     env = env()
-    timeLimit = env.spec.max_episode_steps
+
     n_epochs = 5
     batch_size = 50
     episode_num = 400
     training_interval_step = 100
+    timeLimit = env.spec.max_episode_steps
+
+    chkpt_dir = "./results/models/PPO"
+    chkpt_dir = get_unique_log_dir(chkpt_dir)
+
+    figure_folder = "./results/plots/PPO"
+    figure_file = get_unique_log_dir(figure_folder) + "/LearningCurve.png"
 
     logger = Logger(log_dir="./results/tb/PPO")
 
@@ -41,11 +47,8 @@ if __name__ == "__main__":
         batch_size=batch_size,
         n_epochs=n_epochs,
         logger=logger,
-        chkpt_dir="./results/models/PPO",
+        chkpt_dir=chkpt_dir,
     )
-
-    figure_folder = "./results/plots/PPO"
-    figure_file = get_unique_log_dir(figure_folder) + "/LearningCurve.png"
 
     best_score = env.reward_range[0]
     score_history = []
@@ -70,6 +73,7 @@ if __name__ == "__main__":
             n_steps += 1
             t_step += 1
             logger.update_global_step(n_steps)
+            logger.add_scalar("reward", reward)
 
             if n_steps % training_interval_step == 0:
                 agent.anneal_actor_critic_lr(
@@ -82,6 +86,9 @@ if __name__ == "__main__":
         score_history.append(score)
         avg_score = np.mean(score_history[-100:])
 
+        logger.add_scalar("episodic mean reward", score / t_step, n_steps)
+        logger.add_scalar("avg score", avg_score, n_steps)
+
         if avg_score > best_score:
             best_score = avg_score
             agent.save_models()
@@ -91,9 +98,9 @@ if __name__ == "__main__":
             eps,
             "score %.1f" % score,
             "avg score %.1f" % avg_score,
-            "time_steps",
+            "global_steps",
             n_steps,
-            "time_step",
+            "episode_step",
             t_step,
         )
     x = [i + 1 for i in range(len(score_history))]
