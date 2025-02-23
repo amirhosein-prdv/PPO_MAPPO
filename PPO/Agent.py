@@ -4,7 +4,7 @@ from typing import Optional, Tuple, List
 
 from .RolloutBuffer import RolloutBuffer
 from .Networks import ActorNetwork, CriticNetwork
-from .utils import get_unique_log_dir
+from .utils import get_unique_log_dir, anneal_learning_rate
 
 
 class Agent:
@@ -66,24 +66,12 @@ class Agent:
         )
         self.memory = RolloutBuffer(batch_size)
 
-    def anneal_learning_rate(
-        self,
-        optimizer: T.optim.Optimizer,
-        initial_lr: float,
-        current_step: int,
-        total_steps: int,
-    ) -> None:
-        """Anneal the learning rate linearly."""
-        lr = initial_lr * (1 - (current_step / float(total_steps)))
-        for param_group in optimizer.param_groups:
-            param_group["lr"] = lr
-
     def anneal_actor_critic_lr(self, current_step: int, total_steps: int) -> None:
         """Anneal the learning rate of the actor and critic network."""
-        self.anneal_learning_rate(
+        anneal_learning_rate(
             self.actor.optimizer, self.actor.initial_lr, current_step, total_steps
         )
-        self.anneal_learning_rate(
+        anneal_learning_rate(
             self.critic.optimizer, self.critic.initial_lr, current_step, total_steps
         )
 
