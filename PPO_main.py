@@ -25,7 +25,9 @@ def make_env(gym_id, seed: Optional[int] = None):
 
 
 if __name__ == "__main__":
-    env = gym.make("BipedalWalker-v3")
+    env = make_env("BipedalWalker-v3")
+    env = env()
+    timeLimit = env.spec.max_episode_steps
     n_epochs = 5
     batch_size = 50
     episode_num = 400
@@ -48,6 +50,7 @@ if __name__ == "__main__":
     best_score = env.reward_range[0]
     score_history = []
 
+    learn_steps = timeLimit * episode_num // training_interval_step
     learn_iters = 0
     avg_score = 0
 
@@ -69,7 +72,9 @@ if __name__ == "__main__":
             logger.update_global_step(n_steps)
 
             if n_steps % training_interval_step == 0:
-                agent.anneal_actor_critic_lr(current_step=0, total_steps=1)
+                agent.anneal_actor_critic_lr(
+                    current_step=learn_iters, total_steps=learn_steps
+                )
                 agent.learn()
                 learn_iters += 1
             state = next_state
@@ -88,8 +93,8 @@ if __name__ == "__main__":
             "avg score %.1f" % avg_score,
             "time_steps",
             n_steps,
-            "training_interval_steps",
-            learn_iters,
+            "time_step",
+            t_step,
         )
     x = [i + 1 for i in range(len(score_history))]
     plot_learning_curve(x, score_history, figure_file)
