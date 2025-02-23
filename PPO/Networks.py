@@ -27,6 +27,7 @@ class ActorNetwork(nn.Module):
     ) -> None:
         super(ActorNetwork, self).__init__()
 
+        self.initial_lr = actor_lr
         self.checkpoint_file = os.path.join(chkpt_dir, "actor_torch_ppo")
 
         layers = []
@@ -67,6 +68,7 @@ class CriticNetwork(nn.Module):
     ) -> None:
         super(CriticNetwork, self).__init__()
 
+        self.initial_lr = critic_lr
         self.checkpoint_file = os.path.join(chkpt_dir, "critic_torch_ppo")
 
         layers = []

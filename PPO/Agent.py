@@ -21,7 +21,6 @@ class Agent:
         vf_coef: float = 0.5,
         ent_coef: float = 0.0,
         max_grad_norm: float = 0.5,
-        lr_anealing: bool = True,
         target_kl: Optional[float] = None,
         logger: Optional[object] = None,
         chkpt_dir: str = "./tmp/PPO-Agent",
@@ -33,7 +32,6 @@ class Agent:
         self.ent_coef = ent_coef
         self.vf_coef = vf_coef
         self.max_grad_norm = max_grad_norm
-        self.lr_anealing = lr_anealing
         self.target_kl = target_kl
 
         self.n_epochs = n_epochs
@@ -67,6 +65,27 @@ class Agent:
             chkpt_dir=chkpt_dir,
         )
         self.memory = RolloutBuffer(batch_size)
+
+    def anneal_learning_rate(
+        self,
+        optimizer: T.optim.Optimizer,
+        initial_lr: float,
+        current_step: int,
+        total_steps: int,
+    ) -> None:
+        """Anneal the learning rate linearly."""
+        lr = initial_lr * (1 - (current_step / float(total_steps)))
+        for param_group in optimizer.param_groups:
+            param_group["lr"] = lr
+
+    def anneal_actor_critic_lr(self, current_step: int, total_steps: int) -> None:
+        """Anneal the learning rate of the actor and critic network."""
+        self.anneal_learning_rate(
+            self.actor.optimizer, self.actor.initial_lr, current_step, total_steps
+        )
+        self.anneal_learning_rate(
+            self.critic.optimizer, self.critic.initial_lr, current_step, total_steps
+        )
 
     def save_models(self) -> None:
         print("... saving models ...")
