@@ -56,6 +56,7 @@ if __name__ == "__main__":
         state, info = env.reset()
         done = False
         score = 0
+        t_step = 0
         while not done:
             action, logprob, value = agent.get_action(state)
             next_state, reward, terminated, truncated, info = env.step(action)
@@ -64,9 +65,11 @@ if __name__ == "__main__":
             agent.memory.store(state, action, logprob, value, next_state, reward, done)
 
             n_steps += 1
+            t_step += 1
             logger.update_global_step(n_steps)
 
             if n_steps % training_interval_step == 0:
+                agent.anneal_actor_critic_lr(current_step=0, total_steps=1)
                 agent.learn()
                 learn_iters += 1
             state = next_state
