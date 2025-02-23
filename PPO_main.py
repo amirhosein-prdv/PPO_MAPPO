@@ -1,7 +1,28 @@
+from typing import Optional
 import gym
 import numpy as np
 from PPO.Agent import Agent
 from PPO.utils import plot_learning_curve, Logger, get_unique_log_dir
+
+
+def make_env(gym_id, seed: Optional[int] = None):
+    def thunk():
+        env = gym.make(gym_id)
+        env = gym.wrappers.RecordEpisodeStatistics(env)
+
+        env = gym.wrappers.ClipAction(env)
+        env = gym.wrappers.NormalizeObservation(env)
+        env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
+        env = gym.wrappers.NormalizeReward(env)
+        env = gym.wrappers.TransformReward(env, lambda reward: np.clip(reward, -10, 10))
+        if seed is not None:
+            env.seed(seed)
+            env.action_space.seed(seed)
+            env.observation_space.seed(seed)
+        return env
+
+    return thunk
+
 
 if __name__ == "__main__":
     env = gym.make("BipedalWalker-v3")
