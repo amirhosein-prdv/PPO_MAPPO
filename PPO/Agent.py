@@ -219,26 +219,26 @@ class Agent:
                 if approx_kl > self.target_kl:
                     break
 
-            if self.logger is not None:
-                y_pred, y_true = values.cpu().numpy(), returns.cpu().numpy()
-                var_y = np.var(y_true)
-                explained_var = (
-                    np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
-                )
+        if self.logger is not None:
+            y_pred, y_true = values.cpu().numpy(), returns.cpu().numpy()
+            var_y = np.var(y_true)
+            explained_var = (
+                np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
+            )
 
-                # TRY NOT TO MODIFY: record rewards for plotting purposes
-                global_step = self.logger.global_step
-                add_scalar = self.logger.add_scalar()
-                add_scalar(
-                    "charts/learning_rate",
-                    self.actor.optimizer.param_groups[0]["lr"],
-                    global_step,
-                )
-                add_scalar("losses/value_loss", critic_loss.item(), global_step)
-                add_scalar("losses/policy_loss", actor_loss.item(), global_step)
-                add_scalar("losses/entropy", entropy_loss.item(), global_step)
-                add_scalar("losses/approx_kl", approx_kl.item(), global_step)
-                add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
-                add_scalar("losses/explained_variance", explained_var, global_step)
+            # TRY NOT TO MODIFY: record rewards for plotting purposes
+            global_step = self.logger.global_step
+            add_scalar = self.logger.add_scalar()
+            add_scalar(
+                "charts/learning_rate",
+                self.actor.optimizer.param_groups[0]["lr"],
+                global_step,
+            )
+            add_scalar("losses/value_loss", critic_loss.item(), global_step)
+            add_scalar("losses/policy_loss", actor_loss.item(), global_step)
+            add_scalar("losses/entropy", entropy_loss.item(), global_step)
+            add_scalar("losses/approx_kl", approx_kl.item(), global_step)
+            add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
+            add_scalar("losses/explained_variance", explained_var, global_step)
 
         self.memory.clear()
