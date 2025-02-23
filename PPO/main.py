@@ -10,7 +10,7 @@ if __name__ == "__main__":
     episode_num = 400
     training_interval_step = 100
 
-    logger = Logger(log_dir="./tb/PPO")
+    logger = Logger(log_dir=".results/tb/PPO")
 
     agent = Agent(
         state_dim=env.observation_space.shape[0],
@@ -18,10 +18,10 @@ if __name__ == "__main__":
         batch_size=batch_size,
         n_epochs=n_epochs,
         logger=logger,
-        chkpt_dir="./models/PPO-Agent",
+        chkpt_dir=".results/models/PPO",
     )
 
-    figure_folder = "./plots/PPO"
+    figure_folder = ".results/plots/PPO"
     figure_file = get_unique_log_dir(figure_folder) + "/LearningCurve.png"
 
     best_score = env.reward_range[0]
