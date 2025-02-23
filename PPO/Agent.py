@@ -4,7 +4,7 @@ from typing import Optional, Tuple, List
 
 from .RolloutBuffer import RolloutBuffer
 from .Networks import ActorNetwork, CriticNetwork
-from .utils import get_unique_log_dir, anneal_learning_rate
+from .utils import anneal_learning_rate, Logger
 
 
 class Agent:
@@ -22,7 +22,7 @@ class Agent:
         ent_coef: float = 0.0,
         max_grad_norm: float = 0.5,
         target_kl: Optional[float] = None,
-        logger: Optional[object] = None,
+        logger: Optional["Logger"] = None,
         chkpt_dir: str = "./tmp/PPO-Agent",
     ) -> None:
         self.gamma = gamma
@@ -48,8 +48,6 @@ class Agent:
 
         self.norm_adv = True
         self.clip_vloss = True
-
-        chkpt_dir = get_unique_log_dir(chkpt_dir)
 
         self.actor = ActorNetwork(
             state_dim=state_dim,
@@ -227,18 +225,14 @@ class Agent:
             )
 
             # TRY NOT TO MODIFY: record rewards for plotting purposes
-            global_step = self.logger.global_step
-            add_scalar = self.logger.add_scalar()
-            add_scalar(
-                "charts/learning_rate",
-                self.actor.optimizer.param_groups[0]["lr"],
-                global_step,
+            self.logger.add_scalar(
+                "charts/learning_rate", self.actor.optimizer.param_groups[0]["lr"]
             )
-            add_scalar("losses/value_loss", critic_loss.item(), global_step)
-            add_scalar("losses/policy_loss", actor_loss.item(), global_step)
-            add_scalar("losses/entropy", entropy_loss.item(), global_step)
-            add_scalar("losses/approx_kl", approx_kl.item(), global_step)
-            add_scalar("losses/clipfrac", np.mean(clipfracs), global_step)
-            add_scalar("losses/explained_variance", explained_var, global_step)
+            self.logger.add_scalar("losses/value_loss", critic_loss.item())
+            self.logger.add_scalar("losses/policy_loss", actor_loss.item())
+            self.logger.add_scalar("losses/entropy", entropy_loss.item())
+            self.logger.add_scalar("losses/approx_kl", approx_kl.item())
+            self.logger.add_scalar("losses/clipfrac", np.mean(clipfracs))
+            self.logger.add_scalar("losses/explained_variance", explained_var)
 
         self.memory.clear()
