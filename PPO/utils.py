@@ -53,22 +53,34 @@ class Logger:
     def update_global_step(self, step: int) -> None:
         self.global_step = step
 
-    def add_scalar(self) -> callable:
-        """Returns the writer's add_scalar function."""
-        return self.writer.add_scalar
+    def add_scalar(
+        self, tag: str, scalar_value: float, global_step: int = None
+    ) -> None:
+        """Adds a scalar value to the writer."""
+        self.writer.add_scalar(tag, scalar_value, global_step or self.global_step)
 
-    def add_scalars(self) -> callable:
-        """Returns the writer's add_scalars function."""
-        return self.writer.add_scalars
+    def add_scalars(
+        self, main_tag: str, tag_scalar_dict: dict, global_step: int = None
+    ) -> None:
+        """Adds multiple scalar values to the writer."""
+        self.writer.add_scalars(
+            main_tag, tag_scalar_dict, global_step or self.global_step
+        )
 
-    def add_histogram(self) -> callable:
-        """Returns the writer's add_histogram function."""
-        return self.writer.add_histogram
+    def add_histogram(
+        self,
+        tag: str,
+        values: T.Tensor,
+        global_step: int = None,
+        bins: str = "tensorflow",
+    ) -> None:
+        """Adds a histogram to the writer."""
+        self.writer.add_histogram(tag, values, global_step or self.global_step, bins)
 
-    def add_text(self) -> callable:
-        """Returns the writer's add_text function."""
-        return self.writer.add_text
+    def add_text(self, tag: str, text_string: str, global_step: int = None) -> None:
+        """Adds text data to the writer."""
+        self.writer.add_text(tag, text_string, global_step or self.global_step)
 
-    def close(self) -> callable:
-        """Returns the writer's close function."""
-        return self.writer.close
+    def close(self) -> None:
+        """Closes the writer."""
+        self.writer.close()
