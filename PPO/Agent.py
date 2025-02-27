@@ -3,7 +3,7 @@ import torch as T
 from typing import Optional, Tuple, List
 
 from .RolloutBuffer import RolloutBuffer
-from .Networks import ActorNetwork, CriticNetwork
+from .Networks import ActorNetwork, CriticNetwork, ActorCriticNetwork
 from .utils import anneal_learning_rate, Logger
 
 
@@ -12,6 +12,7 @@ class Agent:
         self,
         state_dim: int,
         action_dim: int,
+        policy_kwargs: dict = None,
         batch_size: int = 64,
         n_epochs: int = 10,
         gamma: float = 0.99,
@@ -49,50 +50,50 @@ class Agent:
         self.norm_adv = True
         self.clip_vloss = True
 
-        self.actor = ActorNetwork(
-            state_dim=state_dim,
-            action_dim=action_dim,
-            fc_dims=[64, 64],
-            actor_lr=lr,
-            chkpt_dir=chkpt_dir,
-        )
-        self.critic = CriticNetwork(
-            state_dim=state_dim,
-            fc_dims=[64, 64],
-            critic_lr=lr,
-            chkpt_dir=chkpt_dir,
-        )
-        self.memory = RolloutBuffer(batch_size)
+        if policy_kwargs is not None:
+            feature_net = policy_kwargs["feature"]
+            vf_net = policy_kwargs["vf"]
+            pi_net = policy_kwargs["pi"]
+        else:
+            feature_net = [32]
+            vf_net = [64, 64]
+            pi_net = [64, 64]
 
-    def anneal_actor_critic_lr(self, current_step: int, total_steps: int) -> None:
-        """Anneal the learning rate of the actor and critic network."""
-        anneal_learning_rate(
-            self.actor.optimizer, self.actor.initial_lr, current_step, total_steps
+        self.policy = ActorCriticNetwork(
+            state_dim,
+            action_dim,
+            feature_fc_dims=feature_net,
+            actor_fc_dims=pi_net,
+            critic_fc_dims=vf_net,
+            chkpt_dir=chkpt_dir,
         )
+
+        self.memory = RolloutBuffer(batch_size)
+        self.device = self.policy.device
+
+    def anneal_lr(self, current_step: int, total_steps: int) -> None:
+        """Anneal the learning rate of the policy network."""
         anneal_learning_rate(
-            self.critic.optimizer, self.critic.initial_lr, current_step, total_steps
+            self.policy.optimizer, self.policy.initial_lr, current_step, total_steps
         )
 
     def save_models(self) -> None:
         print("... saving models ...")
-        self.actor.save_checkpoint()
-        self.critic.save_checkpoint()
+        self.policy.save_checkpoint()
 
     def load_models(self) -> None:
         print("... loading models ...")
-        self.actor.load_checkpoint()
-        self.critic.load_checkpoint()
+        self.policy.load_checkpoint()
 
     def get_value(self, observation: np.ndarray) -> float:
-        state = T.tensor(np.array([observation]), dtype=T.float32).to(self.actor.device)
-        return self.critic(state).item()
+        state = T.tensor(np.array([observation]), dtype=T.float32).to(self.device)
+        return self.policy(state)[1].item()
 
     def get_action(
         self, observation: np.ndarray, action: Optional[T.Tensor] = None
     ) -> Tuple[np.ndarray, float, float]:
-        state = T.tensor(np.array([observation]), dtype=T.float32).to(self.actor.device)
-        dist = self.actor(state)
-        value = self.critic(state)
+        state = T.tensor(np.array([observation]), dtype=T.float32).to(self.device)
+        dist, value = self.policy(state)
 
         if action is None:
             action = dist.sample()
@@ -104,6 +105,7 @@ class Agent:
 
     def learn(self) -> None:
         clipfracs = []
+        self.policy.train()
         for _ in range(self.n_epochs):
             # Generate batch data
             (
@@ -144,16 +146,15 @@ class Agent:
             returns = advantages + values_arr
 
             # Training
-            returns = T.tensor(returns, dtype=T.float32).to(self.actor.device)
-            advantages = T.tensor(advantages, dtype=T.float32).to(self.actor.device)
-            values = T.tensor(values_arr, dtype=T.float32).to(self.actor.device)
+            returns = T.tensor(returns, dtype=T.float32).to(self.device)
+            advantages = T.tensor(advantages, dtype=T.float32).to(self.device)
+            values = T.tensor(values_arr, dtype=T.float32).to(self.device)
             for batch in batches:
-                states = T.tensor(state_arr[batch], dtype=T.float).to(self.actor.device)
-                old_probs = T.tensor(old_prob_arr[batch]).to(self.actor.device)
-                actions = T.tensor(action_arr[batch]).to(self.actor.device)
+                states = T.tensor(state_arr[batch], dtype=T.float).to(self.device)
+                old_probs = T.tensor(old_prob_arr[batch]).to(self.device)
+                actions = T.tensor(action_arr[batch]).to(self.device)
 
-                dist = self.actor(states)
-                new_value = self.critic(states)
+                dist, new_value = self.policy(states)
                 new_value = T.squeeze(new_value)
 
                 dist_entropy = dist.entropy().sum(1, keepdim=True)
@@ -205,13 +206,10 @@ class Agent:
                     - self.ent_coef * entropy_loss
                 )
 
-                self.actor.optimizer.zero_grad()
-                self.critic.optimizer.zero_grad()
+                self.policy.optimizer.zero_grad()
                 total_loss.backward()
-                T.nn.utils.clip_grad_norm_(self.actor.parameters(), self.max_grad_norm)
-                T.nn.utils.clip_grad_norm_(self.critic.parameters(), self.max_grad_norm)
-                self.actor.optimizer.step()
-                self.critic.optimizer.step()
+                T.nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
+                self.policy.optimizer.step()
 
             if self.target_kl is not None:
                 if approx_kl > self.target_kl:
@@ -226,7 +224,7 @@ class Agent:
 
             # TRY NOT TO MODIFY: record rewards for plotting purposes
             self.logger.add_scalar(
-                "charts/learning_rate", self.actor.optimizer.param_groups[0]["lr"]
+                "charts/learning_rate", self.policy.optimizer.param_groups[0]["lr"]
             )
             self.logger.add_scalar("losses/value_loss", critic_loss.item())
             self.logger.add_scalar("losses/policy_loss", actor_loss.item())
