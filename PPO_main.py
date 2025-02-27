@@ -29,10 +29,10 @@ if __name__ == "__main__":
     env = make_env("BipedalWalker-v3")
     env = env()
 
-    n_epochs = 10
-    batch_size = 64
+    n_epochs = 15
+    batch_size = 32
     episode_num = 4000
-    training_interval_step = 128
+    training_interval_step = 200
     timeLimit = env.spec.max_episode_steps
 
     chkpt_dir = "./results/models/PPO"
@@ -43,9 +43,16 @@ if __name__ == "__main__":
 
     logger = Logger(log_dir="./results/tb/PPO")
 
+    policy_kwargs = {
+        "feature": [64, 32],
+        "pi": [256, 256],
+        "vf": [256, 128],
+    }
+
     agent = Agent(
         state_dim=env.observation_space.shape[0],
         action_dim=env.action_space.shape[0],
+        policy_kwargs=policy_kwargs,
         batch_size=batch_size,
         n_epochs=n_epochs,
         logger=logger,
