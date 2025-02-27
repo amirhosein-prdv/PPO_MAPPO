@@ -1,5 +1,5 @@
 from typing import Optional
-import gym
+import gymnasium as gym
 import numpy as np
 from PPO.Agent import Agent
 from PPO.utils import plot_learning_curve, Logger, get_unique_log_dir
@@ -11,7 +11,9 @@ def make_env(gym_id, seed: Optional[int] = None):
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
         env = gym.wrappers.NormalizeObservation(env)
-        env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
+        env = gym.wrappers.TransformObservation(
+            env, lambda obs: np.clip(obs, -10, 10), env.observation_space
+        )
         env = gym.wrappers.NormalizeReward(env)
         env = gym.wrappers.TransformReward(env, lambda reward: np.clip(reward, -10, 10))
         if seed is not None:
@@ -27,10 +29,10 @@ if __name__ == "__main__":
     env = make_env("BipedalWalker-v3")
     env = env()
 
-    n_epochs = 5
-    batch_size = 50
-    episode_num = 400
-    training_interval_step = 100
+    n_epochs = 10
+    batch_size = 64
+    episode_num = 4000
+    training_interval_step = 128
     timeLimit = env.spec.max_episode_steps
 
     chkpt_dir = "./results/models/PPO"
@@ -50,7 +52,7 @@ if __name__ == "__main__":
         chkpt_dir=chkpt_dir,
     )
 
-    best_score = env.reward_range[0]
+    best_score = -np.inf
     score_history = []
 
     learn_steps = timeLimit * episode_num // training_interval_step
@@ -76,9 +78,7 @@ if __name__ == "__main__":
             logger.add_scalar("reward", reward)
 
             if n_steps % training_interval_step == 0:
-                agent.anneal_actor_critic_lr(
-                    current_step=learn_iters, total_steps=learn_steps
-                )
+                agent.anneal_lr(current_step=learn_iters, total_steps=learn_steps)
                 agent.learn()
                 learn_iters += 1
             state = next_state
@@ -88,6 +88,7 @@ if __name__ == "__main__":
 
         logger.add_scalar("episodic mean reward", score / t_step, n_steps)
         logger.add_scalar("avg score", avg_score, n_steps)
+        logger.add_scalar("charts/rollout_step", t_step, n_steps)
 
         if avg_score > best_score:
             best_score = avg_score
