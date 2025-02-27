@@ -126,13 +126,13 @@ class Actor(nn.Module):
 class Critic(nn.Module):
     def __init__(
         self,
-        state_dim: int,
+        input_dim: int,
         fc_dims: List[int],
     ) -> None:
         super(Critic, self).__init__()
 
         layers = []
-        in_features = state_dim
+        in_features = input_dim
         for out_features in fc_dims:
             layers.append(layer_init(nn.Linear(in_features, out_features)))
             layers.append(nn.Tanh())
