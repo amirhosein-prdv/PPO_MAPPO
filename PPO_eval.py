@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     n_epochs = 5
     batch_size = 50
-    episode_num = 20
+    episode_num = 5
     timeLimit = env.spec.max_episode_steps
 
     policy_kwargs = {
@@ -46,7 +46,7 @@ if __name__ == "__main__":
         policy_kwargs=policy_kwargs,
         batch_size=batch_size,
         n_epochs=n_epochs,
-        chkpt_dir="./results/models/PPO_12",
+        chkpt_dir="./results/models/PPO_13",
     )
 
     agent.load_models()
