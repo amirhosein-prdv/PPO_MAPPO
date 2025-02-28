@@ -138,7 +138,7 @@ class Agent:
 
         # Calculate Advantages
         advantages, returns = self.get_GAE_and_returns(
-            self, reward_arr, values_arr, dones_arr, next_states_arr
+            reward_arr, values_arr, dones_arr, next_states_arr
         )
 
         clipfracs = []
