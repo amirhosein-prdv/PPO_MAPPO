@@ -87,7 +87,8 @@ class Agent:
 
     def get_value(self, observation: np.ndarray) -> float:
         state = T.tensor(np.array([observation]), dtype=T.float32).to(self.device)
-        return self.policy(state)[1].item()
+        value = self.policy(state)[1]
+        return value
 
     def get_action(
         self, observation: np.ndarray, action: Optional[T.Tensor] = None
@@ -97,11 +98,9 @@ class Agent:
 
         if action is None:
             action = dist.sample()
+        logprobs = dist.log_prob(action).sum(-1)
 
-        action_logprobs = dist.log_prob(action).sum(1).item()
-        value = T.squeeze(value).item()
-
-        return action.detach().cpu().numpy().squeeze(), action_logprobs, value
+        return action, logprobs, value
 
     def learn(self) -> None:
         clipfracs = []
@@ -136,7 +135,7 @@ class Agent:
                 advantages[t] = a_t
 
             # Advantage for last step
-            last_value = self.get_value(next_states_arr[-1])
+            last_value = self.get_value(next_states_arr[-1]).item()
             delta_last = (
                 reward_arr[-1]
                 + self.gamma * last_value * (1 - int(dones_arr[-1]))
