@@ -11,7 +11,6 @@ class Agent:
         self,
         state_dim: int,
         action_dim: int,
-        n_epochs: int = 10,
         lr: float = 3e-4,
         gamma: float = 0.99,
         gae_lambda: float = 0.95,
