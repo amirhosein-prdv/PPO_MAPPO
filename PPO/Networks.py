@@ -24,11 +24,12 @@ class ActorNetwork(nn.Module):
         actor_lr: float,
         fc_dims: List[int] = [256, 256],
         chkpt_dir: str = "./tmp/PPO-Agent",
+        model_name: str = "actor_torch_ppo",
     ) -> None:
         super(ActorNetwork, self).__init__()
 
         self.initial_lr = actor_lr
-        self.checkpoint_file = os.path.join(chkpt_dir, "actor_torch_ppo")
+        self.checkpoint_file = os.path.join(chkpt_dir, model_name)
 
         layers = []
         in_features = state_dim
@@ -65,11 +66,12 @@ class CriticNetwork(nn.Module):
         critic_lr: float,
         fc_dims: List[int] = [256, 256],
         chkpt_dir: str = "./tmp/PPO-Agent",
+        model_name: str = "critic_torch_ppo",
     ) -> None:
         super(CriticNetwork, self).__init__()
 
         self.initial_lr = critic_lr
-        self.checkpoint_file = os.path.join(chkpt_dir, "critic_torch_ppo")
+        self.checkpoint_file = os.path.join(chkpt_dir, model_name)
 
         layers = []
         in_features = state_dim
