@@ -14,7 +14,7 @@ class RolloutBuffer:
 
         self.batch_size: int = batch_size
 
-    def generate_batches(
+    def get_data(
         self,
     ) -> Tuple[
         np.ndarray,
@@ -24,13 +24,7 @@ class RolloutBuffer:
         np.ndarray,
         np.ndarray,
         np.ndarray,
-        List[np.ndarray],
     ]:
-        n_states = len(self.states)
-        batch_start = np.arange(0, n_states, self.batch_size)
-        indices = np.arange(n_states, dtype=np.int64)
-        np.random.shuffle(indices)
-        batches = [indices[i : i + self.batch_size] for i in batch_start]
 
         return (
             np.array(self.states),
@@ -40,8 +34,18 @@ class RolloutBuffer:
             np.array(self.next_states),
             np.array(self.rewards),
             np.array(self.dones),
-            batches,
         )
+
+    def generate_batches(
+        self,
+    ) -> List[np.ndarray]:
+        n_states = len(self.states)
+        batch_start = np.arange(0, n_states, self.batch_size)
+        indices = np.arange(n_states, dtype=np.int64)
+        np.random.shuffle(indices)
+        batches = [indices[i : i + self.batch_size] for i in batch_start]
+
+        return batches
 
     def store(
         self,
