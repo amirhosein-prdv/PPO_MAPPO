@@ -76,14 +76,6 @@ class Agent:
             self.policy.optimizer, self.policy.initial_lr, current_step, total_steps
         )
 
-    def save_models(self) -> None:
-        print("... saving models ...")
-        self.policy.save_checkpoint()
-
-    def load_models(self) -> None:
-        print("... loading models ...")
-        self.policy.load_checkpoint()
-
     def get_value(self, observation: np.ndarray) -> float:
         state = T.tensor(np.array([observation]), dtype=T.float32).to(self.device)
         value = self.policy(state)[1]
@@ -101,6 +93,35 @@ class Agent:
 
         return action, logprobs, value
 
+    def get_GAE_and_returns(self, reward_arr, values_arr, dones_arr, next_states_arr):
+        # Calculate advantages for the values in memory (bootstrap)
+        advantages = np.zeros(len(reward_arr), dtype=np.float32)
+        returns = np.zeros(len(reward_arr), dtype=np.float32)
+        for t in range(len(reward_arr) - 1):
+            discount = 1
+            a_t = 0
+            for k in range(t, len(reward_arr) - 1):
+                delta = (
+                    reward_arr[k]
+                    + self.gamma * values_arr[k + 1] * (1 - int(dones_arr[k]))
+                    - values_arr[k]
+                )
+                a_t += discount * delta
+                discount *= self.gamma * self.gae_lambda
+            advantages[t] = a_t
+
+        # Advantage for last step
+        last_value = self.get_value(next_states_arr[-1]).item()
+        delta_last = (
+            reward_arr[-1]
+            + self.gamma * last_value * (1 - int(dones_arr[-1]))
+            - values_arr[-1]
+        )
+        advantages[-1] = delta_last
+        returns = advantages + values_arr
+
+        return advantages, returns
+
     def learn(self) -> None:
         clipfracs = []
         self.policy.train()
@@ -117,31 +138,9 @@ class Agent:
                 batches,
             ) = self.memory.generate_batches()
 
-            # Calculate advantages for the values in memory (bootstrap)
-            advantages = np.zeros(len(reward_arr), dtype=np.float32)
-            returns = np.zeros(len(reward_arr), dtype=np.float32)
-            for t in range(len(reward_arr) - 1):
-                discount = 1
-                a_t = 0
-                for k in range(t, len(reward_arr) - 1):
-                    delta = (
-                        reward_arr[k]
-                        + self.gamma * values_arr[k + 1] * (1 - int(dones_arr[k]))
-                        - values_arr[k]
-                    )
-                    a_t += discount * delta
-                    discount *= self.gamma * self.gae_lambda
-                advantages[t] = a_t
-
-            # Advantage for last step
-            last_value = self.get_value(next_states_arr[-1]).item()
-            delta_last = (
-                reward_arr[-1]
-                + self.gamma * last_value * (1 - int(dones_arr[-1]))
-                - values_arr[-1]
+            advantages, returns = self.get_GAE_and_returns(
+                self, reward_arr, values_arr, dones_arr, next_states_arr
             )
-            advantages[-1] = delta_last
-            returns = advantages + values_arr
 
             # Training
             returns = T.tensor(returns, dtype=T.float32).to(self.device)
@@ -232,3 +231,11 @@ class Agent:
             self.logger.add_scalar("losses/explained_variance", explained_var)
 
         self.memory.clear()
+
+    def save_models(self) -> None:
+        print("... saving models ...")
+        self.policy.save_checkpoint()
+
+    def load_models(self) -> None:
+        print("... loading models ...")
+        self.policy.load_checkpoint()
