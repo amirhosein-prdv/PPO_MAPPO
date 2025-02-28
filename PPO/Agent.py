@@ -12,7 +12,6 @@ class Agent:
         self,
         state_dim: int,
         action_dim: int,
-        policy_kwargs: dict = None,
         batch_size: int = 64,
         n_epochs: int = 10,
         gamma: float = 0.99,
@@ -25,6 +24,11 @@ class Agent:
         target_kl: Optional[float] = None,
         logger: Optional["Logger"] = None,
         chkpt_dir: str = "./tmp/PPO-Agent",
+        policy_kwargs: dict[str, List[int]] = {
+            "feature": [32],
+            "pi": [64, 64],
+            "vf": [64, 64],
+        },
     ) -> None:
         self.gamma = gamma
         self.gae_lambda = gae_lambda
@@ -50,14 +54,9 @@ class Agent:
         self.norm_adv = True
         self.clip_vloss = True
 
-        if policy_kwargs is not None:
-            feature_net = policy_kwargs["feature"]
-            vf_net = policy_kwargs["vf"]
-            pi_net = policy_kwargs["pi"]
-        else:
-            feature_net = [32]
-            vf_net = [64, 64]
-            pi_net = [64, 64]
+        feature_net = policy_kwargs["feature"]
+        vf_net = policy_kwargs["vf"]
+        pi_net = policy_kwargs["pi"]
 
         self.policy = ActorCriticNetwork(
             state_dim,
