@@ -23,12 +23,13 @@ class Agent:
         max_grad_norm: float = 0.5,
         target_kl: Optional[float] = None,
         logger: Optional["Logger"] = None,
-        chkpt_dir: str = "./tmp/PPO-Agent",
         policy_kwargs: dict[str, List[int]] = {
             "feature": [32],
             "pi": [64, 64],
             "vf": [64, 64],
         },
+        chkpt_dir: str = "./tmp/PPO-Agent",
+        model_name: str = "actor_critic_ppo",
     ) -> None:
         self.gamma = gamma
         self.gae_lambda = gae_lambda
@@ -65,6 +66,7 @@ class Agent:
             actor_fc_dims=pi_net,
             critic_fc_dims=vf_net,
             chkpt_dir=chkpt_dir,
+            model_name=model_name,
         )
 
         self.memory = RolloutBuffer(batch_size)

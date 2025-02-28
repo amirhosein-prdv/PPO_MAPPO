@@ -156,10 +156,11 @@ class ActorCriticNetwork(nn.Module):
         critic_fc_dims: List[int] = [64, 64],
         policy_lr=3e-4,
         chkpt_dir: str = "./tmp/PPO-Agent",
+        model_name: str = "actor_critic_ppo",
     ) -> None:
         super(ActorCriticNetwork, self).__init__()
 
-        self.checkpoint_file = os.path.join(chkpt_dir, "actor_critic_ppo")
+        self.checkpoint_file = os.path.join(chkpt_dir, model_name)
         self.initial_lr = policy_lr
 
         # Shared feature extraction layers
