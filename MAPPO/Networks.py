@@ -84,19 +84,24 @@ class ActorCriticNetwork(nn.Module):
         self.initial_lr = policy_lr
 
         # Shared feature extraction layers
-        layers = []
-        in_features = state_dim
-        for out_features in feature_fc_dims:
-            layers.append(layer_init(nn.Linear(in_features, out_features)))
-            layers.append(nn.Tanh())
-            in_features = out_features
-        self.feature_extractor = nn.Sequential(*layers)
+        if len(feature_fc_dims) != 0:
+            layers = []
+            in_features = state_dim
+            for out_features in feature_fc_dims:
+                layers.append(layer_init(nn.Linear(in_features, out_features)))
+                layers.append(nn.Tanh())
+                in_features = out_features
+            self.feature_extractor = nn.Sequential(*layers)
+            input_dim = feature_fc_dims[-1]
+        else:
+            self.feature_extractor = nn.Flatten()
+            input_dim = state_dim
 
         # Actor head
-        self.actor = Actor(feature_fc_dims[-1], action_dim, actor_fc_dims)
+        self.actor = Actor(input_dim, action_dim, actor_fc_dims)
 
         # Critic head
-        self.critic = Critic(feature_fc_dims[-1], critic_fc_dims)
+        self.critic = Critic(input_dim, critic_fc_dims)
 
         self.optimizer = optim.Adam(self.parameters(), lr=policy_lr, eps=1e-5)
         self.device = T.device("cuda:0" if T.cuda.is_available() else "cpu")
