@@ -65,6 +65,7 @@ class Agent:
             feature_fc_dims=feature_net,
             actor_fc_dims=pi_net,
             critic_fc_dims=vf_net,
+            policy_lr=lr,
             chkpt_dir=chkpt_dir,
             model_name=model_name,
         )
