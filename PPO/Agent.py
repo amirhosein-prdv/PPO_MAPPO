@@ -123,24 +123,27 @@ class Agent:
         return advantages, returns
 
     def learn(self) -> None:
+        # Generate Data
+        (
+            state_arr,
+            action_arr,
+            old_prob_arr,
+            values_arr,
+            next_states_arr,
+            reward_arr,
+            dones_arr,
+        ) = self.memory.get_data()
+
+        # Calculate Advantages
+        advantages, returns = self.get_GAE_and_returns(
+            self, reward_arr, values_arr, dones_arr, next_states_arr
+        )
+
         clipfracs = []
         self.policy.train()
         for _ in range(self.n_epochs):
             # Generate batch data
-            (
-                state_arr,
-                action_arr,
-                old_prob_arr,
-                values_arr,
-                next_states_arr,
-                reward_arr,
-                dones_arr,
-                batches,
-            ) = self.memory.generate_batches()
-
-            advantages, returns = self.get_GAE_and_returns(
-                self, reward_arr, values_arr, dones_arr, next_states_arr
-            )
+            batches = self.memory.generate_batches()
 
             # Training
             returns = T.tensor(returns, dtype=T.float32).to(self.device)
@@ -170,15 +173,15 @@ class Agent:
                     ]
 
                 # nomalize advantage
-                norm_advantages = (advantages[batch] - advantages[batch].mean()) / (
-                    advantages[batch].std() + 1e-8
-                )
+                normalized_advantages = (
+                    advantages[batch] - advantages[batch].mean()
+                ) / (advantages[batch].std() + 1e-8)
 
                 # calculate actor loss
-                weighted_probs = norm_advantages * prob_ratio
+                weighted_probs = normalized_advantages * prob_ratio
                 weighted_clipped_probs = (
                     T.clamp(prob_ratio, 1 - self.clip_coef, 1 + self.clip_coef)
-                    * norm_advantages
+                    * normalized_advantages
                 )
                 actor_loss = -T.min(weighted_probs, weighted_clipped_probs).mean()
 
