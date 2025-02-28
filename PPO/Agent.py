@@ -141,6 +141,10 @@ class Agent:
             reward_arr, values_arr, dones_arr, next_states_arr
         )
 
+        returns = T.tensor(returns, dtype=T.float32).to(self.device)
+        advantages = T.tensor(advantages, dtype=T.float32).to(self.device)
+        values = T.tensor(values_arr, dtype=T.float32).to(self.device)
+
         clipfracs = []
         self.policy.train()
         for _ in range(self.n_epochs):
@@ -148,9 +152,6 @@ class Agent:
             batches = self.memory.generate_batches()
 
             # Training
-            returns = T.tensor(returns, dtype=T.float32).to(self.device)
-            advantages = T.tensor(advantages, dtype=T.float32).to(self.device)
-            values = T.tensor(values_arr, dtype=T.float32).to(self.device)
             for batch in batches:
                 states = T.tensor(state_arr[batch], dtype=T.float).to(self.device)
                 old_probs = T.tensor(old_prob_arr[batch]).to(self.device)
