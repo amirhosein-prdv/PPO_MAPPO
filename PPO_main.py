@@ -74,10 +74,22 @@ if __name__ == "__main__":
         t_step = 0
         while not done:
             action, logprob, value = agent.get_action(state)
+            action = action.detach().cpu().numpy().squeeze()
+            logprob = logprob.item()
+            value = value.item()
+
             next_state, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
             score += reward
-            agent.memory.store(state, action, logprob, value, next_state, reward, done)
+            agent.memory.store(
+                state,
+                action,
+                logprob,
+                value,
+                next_state,
+                reward,
+                done,
+            )
 
             n_steps += 1
             t_step += 1
