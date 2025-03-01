@@ -147,6 +147,11 @@ class Agent:
         values = T.tensor(values_arr, dtype=T.float32).to(self.device)
 
         clipfracs = []
+        critic_buffer = []
+        actor_buffer = []
+        entropy_buffer = []
+        approx_kl_buffer = []
+        explained_var_buffer = []
         self.policy.train()
         for _ in range(self.n_epochs):
             # Generate batch data
@@ -215,27 +220,37 @@ class Agent:
                 T.nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
                 self.policy.optimizer.step()
 
+                # Calculate explained variance
+                y_pred, y_true = values.cpu().numpy(), returns.cpu().numpy()
+                var_y = np.var(y_true)
+                explained_var = (
+                    np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
+                )
+
+                # Store training variable to log
+                critic_buffer.append(critic_loss.item())
+                actor_buffer.append(actor_loss.item())
+                entropy_buffer.append(entropy_loss.item())
+                approx_kl_buffer.append(approx_kl.item())
+                explained_var_buffer.append(explained_var)
+
             if self.target_kl is not None:
                 if approx_kl > self.target_kl:
                     break
 
         if self.logger is not None:
-            y_pred, y_true = values.cpu().numpy(), returns.cpu().numpy()
-            var_y = np.var(y_true)
-            explained_var = (
-                np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
-            )
-
-            # TRY NOT TO MODIFY: record rewards for plotting purposes
+            # record for plotting purposes
             self.logger.add_scalar(
-                "charts/learning_rate", self.policy.optimizer.param_groups[0]["lr"]
+                "losses/learning_rate", self.policy.optimizer.param_groups[0]["lr"]
             )
-            self.logger.add_scalar("losses/value_loss", critic_loss.item())
-            self.logger.add_scalar("losses/policy_loss", actor_loss.item())
-            self.logger.add_scalar("losses/entropy", entropy_loss.item())
-            self.logger.add_scalar("losses/approx_kl", approx_kl.item())
+            self.logger.add_scalar("losses/value_loss", np.mean(critic_buffer))
+            self.logger.add_scalar("losses/policy_loss", np.mean(actor_buffer))
+            self.logger.add_scalar("losses/entropy", np.mean(entropy_buffer))
+            self.logger.add_scalar("losses/approx_kl", np.mean(approx_kl_buffer))
             self.logger.add_scalar("losses/clipfrac", np.mean(clipfracs))
-            self.logger.add_scalar("losses/explained_variance", explained_var)
+            self.logger.add_scalar(
+                "losses/explained_variance", np.mean(explained_var_buffer)
+            )
 
         self.memory.clear()
 
