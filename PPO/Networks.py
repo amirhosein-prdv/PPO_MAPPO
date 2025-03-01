@@ -38,6 +38,7 @@ class ActorNetwork(nn.Module):
             layers.append(nn.Tanh())
             in_features = out_features
         layers.append(layer_init(nn.Linear(in_features, action_dim), std=0.01))
+        layers.append(nn.Tanh())
 
         self.mean = nn.Sequential(*layers)
         self.logstd = nn.Parameter(T.zeros(1, action_dim))
@@ -114,6 +115,7 @@ class Actor(nn.Module):
             layers.append(nn.Tanh())
             in_features = out_features
         layers.append(layer_init(nn.Linear(in_features, output_dim), std=0.01))
+        layers.append(nn.Tanh())
 
         self.mean = nn.Sequential(*layers)
         self.logstd = nn.Parameter(T.zeros(1, output_dim))
