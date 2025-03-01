@@ -120,7 +120,7 @@ class MultiAgent:
 
                 dist_entropy = dist.entropy().sum(1, keepdim=True)
                 new_probs = dist.log_prob(actions).sum(1)
-                prob_ratio = new_probs.exp() / old_probs.exp()
+                prob_ratio = (new_probs - old_probs).exp()
                 prob_logratio = new_probs - old_probs
 
                 with T.no_grad():
