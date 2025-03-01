@@ -29,6 +29,7 @@ if __name__ == "__main__":
     env_name = "Hopper"
     env = make_env("Hopper-v5")
     env = env()
+    max_action = env.action_space.high[0]
 
     n_epochs = 10
     batch_size = 64
@@ -53,6 +54,7 @@ if __name__ == "__main__":
     agent = Agent(
         state_dim=env.observation_space.shape[0],
         action_dim=env.action_space.shape[0],
+        max_action=max_action,
         policy_kwargs=policy_kwargs,
         batch_size=batch_size,
         n_epochs=n_epochs,
