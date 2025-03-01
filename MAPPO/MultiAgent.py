@@ -49,8 +49,9 @@ class MultiAgent:
 
         self.agents = {
             agent: Agent(
-                state_dim=env.observation_space(agent),
-                action_dim=env.action_space(agent),
+                state_dim=env.observation_space(agent).shape[0],
+                action_dim=env.action_space(agent).shape[0],
+                max_action=env.action_space(agent).high[0],
                 n_epochs=n_epochs,
                 lr=lr,
                 gamma=gamma,
