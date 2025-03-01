@@ -11,6 +11,7 @@ class Agent:
         self,
         state_dim: int,
         action_dim: int,
+        max_action: int = 1,
         lr: float = 3e-4,
         gamma: float = 0.99,
         gae_lambda: float = 0.95,
@@ -33,6 +34,7 @@ class Agent:
         self.policy = ActorCriticNetwork(
             state_dim,
             action_dim,
+            max_action,
             feature_fc_dims=feature_net,
             actor_fc_dims=pi_net,
             critic_fc_dims=vf_net,
