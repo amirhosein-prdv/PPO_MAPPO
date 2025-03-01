@@ -21,12 +21,14 @@ class ActorNetwork(nn.Module):
         self,
         state_dim: int,
         action_dim: int,
+        max_action: int,
         actor_lr: float,
         fc_dims: List[int] = [256, 256],
         chkpt_dir: str = "./tmp/PPO-Agent",
         model_name: str = "actor_torch_ppo",
     ) -> None:
         super(ActorNetwork, self).__init__()
+        self.max_action = max_action
 
         self.initial_lr = actor_lr
         self.checkpoint_file = os.path.join(chkpt_dir, model_name)
@@ -48,7 +50,7 @@ class ActorNetwork(nn.Module):
         self.to(self.device)
 
     def forward(self, state: T.Tensor) -> Normal:
-        action_mean = self.mean(state)
+        action_mean = self.mean(state) * self.max_action
         action_logstd = self.logstd.expand_as(action_mean).exp()
         dist = Normal(action_mean, action_logstd)
         return dist
@@ -104,9 +106,11 @@ class Actor(nn.Module):
         self,
         input_dim: int,
         output_dim: int,
+        max_action: int,
         fc_dims: List[int],
     ) -> None:
         super(Actor, self).__init__()
+        self.max_action = max_action
 
         layers = []
         in_features = input_dim
@@ -121,7 +125,7 @@ class Actor(nn.Module):
         self.logstd = nn.Parameter(T.zeros(1, output_dim))
 
     def forward(self, state: T.Tensor) -> Normal:
-        action_mean = self.mean(state)
+        action_mean = self.mean(state) * self.max_action
         action_logstd = self.logstd.expand_as(action_mean).exp()
         dist = Normal(action_mean, action_logstd)
         return dist
@@ -155,6 +159,7 @@ class ActorCriticNetwork(nn.Module):
         self,
         state_dim: int,
         action_dim: int,
+        max_action: int = 1,
         feature_fc_dims: List[int] = [64],
         actor_fc_dims: List[int] = [64, 64],
         critic_fc_dims: List[int] = [64, 64],
@@ -182,7 +187,7 @@ class ActorCriticNetwork(nn.Module):
             input_dim = state_dim
 
         # Actor head
-        self.actor = Actor(input_dim, action_dim, actor_fc_dims)
+        self.actor = Actor(input_dim, action_dim, max_action, actor_fc_dims)
 
         # Critic head
         self.critic = Critic(input_dim, critic_fc_dims)
