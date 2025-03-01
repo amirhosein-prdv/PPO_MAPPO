@@ -12,6 +12,7 @@ class Agent:
         self,
         state_dim: int,
         action_dim: int,
+        max_action: int,
         batch_size: int = 64,
         n_epochs: int = 10,
         gamma: float = 0.99,
@@ -62,6 +63,7 @@ class Agent:
         self.policy = ActorCriticNetwork(
             state_dim,
             action_dim,
+            max_action=max_action,
             feature_fc_dims=feature_net,
             actor_fc_dims=pi_net,
             critic_fc_dims=vf_net,
