@@ -2,7 +2,7 @@ from typing import Optional
 import gymnasium as gym
 import numpy as np
 from PPO.Agent import Agent
-from PPO.utils import Logger, get_unique_log_dir
+from PPO.utils import Logger, get_unique_log_dir, plot_learning_curve
 
 
 def make_env(gym_id, seed: Optional[int] = None):
@@ -100,8 +100,8 @@ if __name__ == "__main__":
             logger.update_global_step(n_steps)
             logger.add_scalar("rollout/step_reward", reward, n_steps)
 
-            if n_steps % training_interval_step == 0:
-                agent.anneal_lr(current_step=learn_iters, total_steps=learn_steps)
+            if n_steps % training_interval_step == 0:  # or done: (Think !)
+                agent.anneal_lr(current_step=1, total_steps=1000)
                 agent.learn()
                 learn_iters += 1
             state = next_state
@@ -127,3 +127,5 @@ if __name__ == "__main__":
             "episode_step",
             t_step,
         )
+    x = [i + 1 for i in range(len(score_history))]
+    plot_learning_curve(x, score_history, figure_file)
