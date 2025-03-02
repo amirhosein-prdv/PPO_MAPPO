@@ -49,7 +49,7 @@ if __name__ == "__main__":
         "vf": [256, 128],
     }
 
-    agent = MultiAgent(
+    multiAgents = MultiAgent(
         env=env,
         policy_kwargs=policy_kwargs,
         batch_size=batch_size,
@@ -72,15 +72,16 @@ if __name__ == "__main__":
         score = 0
         t_step = 0
         while not done:
-            action, logprob, value = agent.get_action(state)
-            action = action.detach().cpu().numpy().squeeze()
-            logprob = logprob.item()
-            value = value.item()
+            multiAgents.eval()
+            action, logprob, value = multiAgents.get_action(state)
+            action = {k: v.detach().cpu().numpy().squeeze() for k, v in action.items()}
+            logprob = {k: v.item() for k, v in logprob.items()}
+            value = {k: v.item() for k, v in value.items()}
 
             next_state, reward, terminated, truncated, info = env.step(action)
-            done = terminated or truncated
-            score += reward
-            agent.memory.store(
+            done = any(terminated.values()) or any(truncated.values())
+            score += sum([v for v in reward.values()])
+            multiAgents.memory.store(
                 state,
                 action,
                 logprob,
@@ -93,24 +94,24 @@ if __name__ == "__main__":
             n_steps += 1
             t_step += 1
             logger.update_global_step(n_steps)
-            logger.add_scalar("reward", reward)
+            logger.add_dict("rollout/step_reward", reward, n_steps)
 
             if n_steps % training_interval_step == 0:
-                agent.anneal_lr(current_step=learn_iters, total_steps=learn_steps)
-                agent.learn()
+                multiAgents.anneal_lr(current_step=learn_iters, total_steps=learn_steps)
+                multiAgents.learn()
                 learn_iters += 1
             state = next_state
 
         score_history.append(score)
-        avg_score = np.mean(score_history[-100:])
+        avg_score = np.mean(score_history[-10:])
 
-        logger.add_scalar("episodic mean reward", score / t_step, n_steps)
-        logger.add_scalar("avg score", avg_score, n_steps)
-        logger.add_scalar("charts/rollout_step", t_step, n_steps)
+        logger.add_scalar("rollout/avg score", avg_score, n_steps)
+        logger.add_scalar("rollout/episode_reward", score / t_step, n_steps)
+        logger.add_scalar("rollout/episode_len", t_step, n_steps)
 
         if avg_score > best_score:
             best_score = avg_score
-            agent.save_models()
+            multiAgents.save_models()
 
         print(
             "episode",
