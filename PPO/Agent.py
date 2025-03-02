@@ -243,15 +243,15 @@ class Agent:
         if self.logger is not None:
             # record for plotting purposes
             self.logger.add_scalar(
-                "losses/learning_rate", self.policy.optimizer.param_groups[0]["lr"]
+                "train/learning_rate", self.policy.optimizer.param_groups[0]["lr"]
             )
-            self.logger.add_scalar("losses/value_loss", np.mean(critic_buffer))
-            self.logger.add_scalar("losses/policy_loss", np.mean(actor_buffer))
-            self.logger.add_scalar("losses/entropy", np.mean(entropy_buffer))
-            self.logger.add_scalar("losses/approx_kl", np.mean(approx_kl_buffer))
-            self.logger.add_scalar("losses/clipfrac", np.mean(clipfracs))
+            self.logger.add_scalar("train/value_loss", np.mean(critic_buffer))
+            self.logger.add_scalar("train/policy_loss", np.mean(actor_buffer))
+            self.logger.add_scalar("train/entropy", np.mean(entropy_buffer))
+            self.logger.add_scalar("train/approx_kl", np.mean(approx_kl_buffer))
+            self.logger.add_scalar("train/clipfrac", np.mean(clipfracs))
             self.logger.add_scalar(
-                "losses/explained_variance", np.mean(explained_var_buffer)
+                "train/explained_variance", np.mean(explained_var_buffer)
             )
 
         self.memory.clear()

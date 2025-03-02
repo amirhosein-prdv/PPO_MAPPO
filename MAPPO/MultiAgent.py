@@ -214,25 +214,25 @@ class MultiAgent:
         if self.logger is not None:
             # record for plotting purposes
             self.logger.add_scalar(
-                "losses/learning_rate", agent.policy.optimizer.param_groups[0]["lr"]
+                "train/learning_rate", agent.policy.optimizer.param_groups[0]["lr"]
             )
             self.logger.add_scalar(
-                f"losses/agent_{agent_name}/value_loss", np.mean(critic_buffer)
+                f"train/agent_{agent_name}/value_loss", np.mean(critic_buffer)
             )
             self.logger.add_scalar(
-                f"losses/agent_{agent_name}/policy_loss", np.mean(actor_buffer)
+                f"train/agent_{agent_name}/policy_loss", np.mean(actor_buffer)
             )
             self.logger.add_scalar(
-                f"losses/agent_{agent_name}/entropy", np.mean(entropy_buffer)
+                f"train/agent_{agent_name}/entropy", np.mean(entropy_buffer)
             )
             self.logger.add_scalar(
-                f"losses/agent_{agent_name}/approx_kl", np.mean(approx_kl_buffer)
+                f"train/agent_{agent_name}/approx_kl", np.mean(approx_kl_buffer)
             )
             self.logger.add_scalar(
-                f"losses/agent_{agent_name}/clipfrac", np.mean(clipfracs)
+                f"train/agent_{agent_name}/clipfrac", np.mean(clipfracs)
             )
             self.logger.add_scalar(
-                f"losses/agent_{agent_name}/explained_variance",
+                f"train/agent_{agent_name}/explained_variance",
                 np.mean(explained_var_buffer),
             )
 
