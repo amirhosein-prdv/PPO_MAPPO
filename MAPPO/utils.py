@@ -81,6 +81,10 @@ class Logger:
         """Adds text data to the writer."""
         self.writer.add_text(tag, text_string, global_step or self.global_step)
 
+    def add_dict(self, tag: str, dict_value: dict, global_step: int = None) -> None:
+        for k, v in dict_value.items():
+            self.writer.add_scalar(tag + f"/{k}", v, global_step or self.global_step)
+
     def close(self) -> None:
         """Closes the writer."""
         self.writer.close()
