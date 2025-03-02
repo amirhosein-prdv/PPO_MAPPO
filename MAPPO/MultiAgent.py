@@ -1,6 +1,6 @@
 import torch as T
 import numpy as np
-from .utils import Logger
+from .utils import Logger, anneal_learning_rate
 from typing import List, Optional, Tuple
 
 from pettingzoo import ParallelEnv
@@ -52,16 +52,9 @@ class MultiAgent:
                 state_dim=env.observation_space(agent).shape[0],
                 action_dim=env.action_space(agent).shape[0],
                 max_action=env.action_space(agent).high[0],
-                n_epochs=n_epochs,
                 lr=lr,
                 gamma=gamma,
                 gae_lambda=gae_lambda,
-                clip_coef=clip_coef,
-                vf_coef=vf_coef,
-                ent_coef=ent_coef,
-                max_grad_norm=max_grad_norm,
-                target_kl=target_kl,
-                logger=logger,
                 policy_kwargs=policy_kwargs,
                 chkpt_dir=chkpt_dir,
                 model_name=f"actor-critic_{agent}",
@@ -70,11 +63,36 @@ class MultiAgent:
         }
 
         self.memory = MultiAgentRolloutBuffer(batch_size, self.possible_agents)
-        self.device = self.agents[0].device
+        self.device = self.agents[list(self.agents.keys())[0]].device
+
+    def anneal_lr(self, current_step: int, total_steps: int) -> None:
+        """Anneal the learning rate of the policy network."""
+        for agent in self.agents.values():
+            anneal_learning_rate(
+                agent.policy.optimizer,
+                agent.policy.initial_lr,
+                current_step,
+                total_steps,
+            )
+
+    def get_action(self, state: np.ndarray) -> dict:
+        action = {}
+        logprob = {}
+        value = {}
+        for agent_name, agent in self.agents.items():
+            action[agent_name], logprob[agent_name], value[agent_name] = (
+                agent.get_action(state[agent_name])
+            )
+        return action, logprob, value
+
+    def eval(self) -> None:
+        for agent in self.agents.values():
+            agent.policy.eval()
 
     def learn(self) -> None:
         for agent in self.possible_agents:
             self._learn(agent)
+        self.memory.clear()
 
     def _learn(self, agent_name: str) -> None:
         # Generate Data
@@ -92,7 +110,7 @@ class MultiAgent:
 
         # Calculate Advantages
         advantages, returns = agent.get_GAE_and_returns(
-            self, reward_arr, values_arr, dones_arr, next_states_arr
+            reward_arr, values_arr, dones_arr, next_states_arr
         )
 
         returns = T.tensor(returns, dtype=T.float32).to(self.device)
@@ -116,7 +134,7 @@ class MultiAgent:
                 old_probs = T.tensor(old_prob_arr[batch]).to(self.device)
                 actions = T.tensor(action_arr[batch]).to(self.device)
 
-                dist, new_value = self.policy(states)
+                dist, new_value = agent.policy(states)
                 new_value = T.squeeze(new_value)
 
                 dist_entropy = dist.entropy().sum(1, keepdim=True)
@@ -196,7 +214,7 @@ class MultiAgent:
         if self.logger is not None:
             # record for plotting purposes
             self.logger.add_scalar(
-                "losses/learning_rate", self.policy.optimizer.param_groups[0]["lr"]
+                "losses/learning_rate", agent.policy.optimizer.param_groups[0]["lr"]
             )
             self.logger.add_scalar(
                 f"losses/agent_{agent_name}/value_loss", np.mean(critic_buffer)
@@ -218,12 +236,10 @@ class MultiAgent:
                 np.mean(explained_var_buffer),
             )
 
-        self.memory.clear()
-
     def save_models(self) -> None:
-        for agent in self.agents:
+        for agent in self.agents.values():
             agent.save_models()
 
     def load_models(self) -> None:
-        for agent in self.agents:
+        for agent in self.agents.values():
             agent.load_models()
