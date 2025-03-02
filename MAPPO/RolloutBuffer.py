@@ -16,13 +16,11 @@ class MultiAgentRolloutBuffer:
         self.possible_agents: List[str] = possible_agents
 
     def generate_batches(self, agent: str) -> List[np.ndarray]:
-        batches = []
         n_states = len(self.states[agent])
         batch_start = np.arange(0, n_states, self.batch_size)
         indices = np.arange(n_states, dtype=np.int64)
         np.random.shuffle(indices)
-        agent_batches = [indices[i : i + self.batch_size] for i in batch_start]
-        batches.append(agent_batches)
+        batches = [indices[i : i + self.batch_size] for i in batch_start]
 
         return batches
 
@@ -47,21 +45,21 @@ class MultiAgentRolloutBuffer:
 
     def store(
         self,
-        state: np.ndarray,
-        action: np.ndarray,
-        logprobs: np.ndarray,
-        values: np.ndarray,
-        next_state: np.ndarray,
-        reward: float,
+        state: Dict[str, np.ndarray],
+        action: Dict[str, np.ndarray],
+        logprobs: Dict[str, np.ndarray],
+        values: Dict[str, np.ndarray],
+        next_state: Dict[str, np.ndarray],
+        reward: Dict[str, float],
         done: bool,
     ) -> None:
         for agent in self.possible_agents:
-            self.states[agent].append(state)
-            self.actions[agent].append(action)
-            self.logprobs[agent].append(logprobs)
-            self.values[agent].append(values)
-            self.next_states[agent].append(next_state)
-            self.rewards[agent].append(reward)
+            self.states[agent].append(state[agent])
+            self.actions[agent].append(action[agent])
+            self.logprobs[agent].append(logprobs[agent])
+            self.values[agent].append(values[agent])
+            self.next_states[agent].append(next_state[agent])
+            self.rewards[agent].append(reward[agent])
             self.dones[agent].append(done)
 
     def clear(self) -> None:
