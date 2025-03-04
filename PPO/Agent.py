@@ -99,31 +99,33 @@ class Agent:
         return action, logprobs, value
 
     def get_GAE_and_returns(self, reward_arr, values_arr, dones_arr, next_states_arr):
-        # Calculate advantages for the values in memory (bootstrap)
         advantages = np.zeros(len(reward_arr), dtype=np.float32)
         returns = np.zeros(len(reward_arr), dtype=np.float32)
-        for t in range(len(reward_arr) - 1):
-            discount = 1
-            a_t = 0
-            for k in range(t, len(reward_arr) - 1):
-                delta = (
-                    reward_arr[k]
-                    + self.gamma * values_arr[k + 1] * (1 - int(dones_arr[k]))
-                    - values_arr[k]
-                )
-                a_t += discount * delta
-                discount *= self.gamma * self.gae_lambda
-            advantages[t] = a_t
+        with T.no_grad():
+            # Advantage for last step
+            last_value = self.get_value(next_states_arr[-1]).item()
+            delta_last = (
+                reward_arr[-1]
+                + self.gamma * last_value * (1 - int(dones_arr[-1]))
+                - values_arr[-1]
+            )
+            advantages[-1] = delta_last
 
-        # Advantage for last step
-        last_value = self.get_value(next_states_arr[-1]).item()
-        delta_last = (
-            reward_arr[-1]
-            + self.gamma * last_value * (1 - int(dones_arr[-1]))
-            - values_arr[-1]
-        )
-        advantages[-1] = delta_last
-        returns = advantages + values_arr
+            # Calculate advantages for the values in memory (bootstrap)
+            for t in range(len(reward_arr) - 1):
+                discount = 1
+                a_t = 0
+                for k in range(t, len(reward_arr) - 1):
+                    delta = (
+                        reward_arr[k]
+                        + self.gamma * values_arr[k + 1] * (1 - int(dones_arr[k]))
+                        - values_arr[k]
+                    )
+                    a_t += discount * delta
+                    discount *= self.gamma * self.gae_lambda
+                advantages[t] = a_t + discount * delta_last
+
+            returns = advantages + values_arr
 
         return advantages, returns
 
