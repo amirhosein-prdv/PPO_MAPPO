@@ -33,8 +33,8 @@ if __name__ == "__main__":
 
     n_epochs = 10
     batch_size = 64
-    episode_num = 5000
-    training_interval_step = 1024
+    episode_num = 15000
+    training_interval_step = 256
     timeLimit = env.spec.max_episode_steps
 
     chkpt_dir = f"./results/{env_name}/models/PPO"
@@ -47,8 +47,8 @@ if __name__ == "__main__":
 
     policy_kwargs = {
         "feature": [],
-        "pi": [64, 64],
-        "vf": [64, 64],
+        "pi": [256] * 2,
+        "vf": [256] * 2,
     }
 
     agent = Agent(
@@ -85,6 +85,15 @@ if __name__ == "__main__":
             next_state, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
             score += reward
+
+            n_steps += 1
+            t_step += 1
+            logger.update_global_step(n_steps)
+            logger.add_scalar("rollout/step_reward", reward, n_steps)
+
+            if truncated:
+                reward += 0.99 * agent.get_value(next_state).item()
+
             agent.memory.store(
                 state,
                 action,
@@ -94,12 +103,6 @@ if __name__ == "__main__":
                 reward,
                 done,
             )
-
-            n_steps += 1
-            t_step += 1
-            logger.update_global_step(n_steps)
-            logger.add_scalar("rollout/step_reward", reward, n_steps)
-
             if n_steps % training_interval_step == 0:  # or done: (Think !)
                 agent.anneal_lr(current_step=1, total_steps=1000)
                 agent.learn()
