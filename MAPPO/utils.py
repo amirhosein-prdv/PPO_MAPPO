@@ -15,6 +15,34 @@ def plot_learning_curve(x: List[float], scores: List[float], figure_file: str) -
     plt.savefig(figure_file)
 
 
+def plot_smoothly(signal, window_size=10, time=None):
+    if time is None:
+        time = np.arange(len(signal))
+
+    smoothed = np.convolve(signal, np.ones(window_size) / window_size, mode="valid")
+
+    rolling_std = [np.std(signal[i : i + window_size]) for i in range(len(smoothed))]
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(time[: len(smoothed)], smoothed, color="orange", label="Smoothed Signal")
+    plt.fill_between(
+        time[: len(smoothed)],
+        smoothed - rolling_std,
+        smoothed + rolling_std,
+        color="orange",
+        alpha=0.3,
+        label="Variance (Rolling STD)",
+    )
+
+    plt.xlabel("Time or Steps")
+    plt.ylabel("Signal Value")
+    plt.title("Smoothed Signal with Rolling Standard Deviation")
+    plt.legend()
+    plt.grid()
+    plt.ticklabel_format(style="sci", axis="x", scilimits=(6, 6))
+    plt.show()
+
+
 def anneal_learning_rate(
     optimizer: T.optim.Optimizer,
     initial_lr: float,
