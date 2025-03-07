@@ -93,7 +93,9 @@ class Agent:
                     )
                     a_t += discount * delta
                     discount *= self.gamma * self.gae_lambda
-                advantages[t] = a_t + discount * delta_last
+                    if dones_arr[k]:
+                        break
+                advantages[t] = a_t + discount * advantages[k + 1]
 
             returns = advantages + values_arr
         return advantages, returns
