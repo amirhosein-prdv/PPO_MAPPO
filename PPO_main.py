@@ -2,7 +2,8 @@ from typing import Optional
 import gymnasium as gym
 import numpy as np
 from PPO.Agent import Agent
-from PPO.utils import Logger, get_unique_log_dir, plot_learning_curve
+from PPO.utils import get_unique_log_dir, plot_learning_curve
+from PPO.logger import Logger, StepLogger, EvaluationLogger
 
 
 def make_env(gym_id, seed: Optional[int] = None):
@@ -29,6 +30,8 @@ if __name__ == "__main__":
     env_name = "Hopper"
     env = make_env("Hopper-v5")
     env = env()
+    # eval_env = make_env("Hopper-v5")
+    # eval_env = eval_env()
     max_action = env.action_space.high[0]
 
     n_epochs = 10
@@ -62,6 +65,9 @@ if __name__ == "__main__":
         chkpt_dir=chkpt_dir,
     )
 
+    # episode_logger = StepLogger(logger, step_interval=1, suffix_title="eps")
+    # eval_logger = EvaluationLogger(eval_env, agent, logger, eval_episodes=10)
+
     best_score = -np.inf
     score_history = []
 
@@ -88,6 +94,7 @@ if __name__ == "__main__":
 
             n_steps += 1
             t_step += 1
+            # episode_logger.add_info(info)
             logger.update_global_step(n_steps)
             logger.add_scalar("rollout/step_reward", reward, n_steps)
 
@@ -106,8 +113,11 @@ if __name__ == "__main__":
             if n_steps % training_interval_step == 0:  # or done: (Think !)
                 agent.anneal_lr(current_step=1, total_steps=1000)
                 agent.learn()
+                # eval_logger.evaluate_and_log()
                 learn_iters += 1
             state = next_state
+
+        # episode_logger.record_log()
 
         score_history.append(score)
         avg_score = np.mean(score_history[-10:])
