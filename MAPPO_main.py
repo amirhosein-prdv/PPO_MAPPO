@@ -2,7 +2,8 @@ from typing import Optional
 import gymnasium as gym
 import numpy as np
 from MAPPO.MultiAgent import MultiAgent
-from MAPPO.utils import plot_learning_curve, Logger, get_unique_log_dir
+from MAPPO.utils import plot_learning_curve, get_unique_log_dir
+from MAPPO.logger import Logger, StepLogger, EvaluationLogger
 
 
 def make_env(gym_id, seed: Optional[int] = None):
@@ -14,8 +15,10 @@ def make_env(gym_id, seed: Optional[int] = None):
         env = gym.wrappers.TransformObservation(
             env, lambda obs: np.clip(obs, -10, 10), env.observation_space
         )
-        env = gym.wrappers.NormalizeReward(env)
-        env = gym.wrappers.TransformReward(env, lambda reward: np.clip(reward, -10, 10))
+        env = gym.wrappers.NormalizeRewards(env)
+        env = gym.wrappers.TransformRewards(
+            env, lambda rewards: np.clip(rewards, -10, 10)
+        )
         if seed is not None:
             env.seed(seed)
             env.action_space.seed(seed)
@@ -28,6 +31,8 @@ def make_env(gym_id, seed: Optional[int] = None):
 if __name__ == "__main__":
     env = make_env("BipedalWalker-v3")
     env = env()
+    # eval_env = make_env("BipedalWalker-v3")
+    # eval_env = eval_env()
 
     n_epochs = 15
     batch_size = 32
@@ -58,6 +63,9 @@ if __name__ == "__main__":
         chkpt_dir=chkpt_dir,
     )
 
+    # episode_logger = StepLogger(logger, step_interval=1, suffix_title="eps")
+    # eval_logger = EvaluationLogger(eval_env, multiAgents, logger, eval_episodes=10)
+
     best_score = -np.inf
     score_history = []
 
@@ -67,7 +75,7 @@ if __name__ == "__main__":
 
     n_steps = 0
     for eps in range(episode_num):
-        state, info = env.reset()
+        state, infos = env.reset()
         done = False
         score = 0
         t_step = 0
@@ -78,35 +86,39 @@ if __name__ == "__main__":
             logprob = {k: v.item() for k, v in logprob.items()}
             value = {k: v.item() for k, v in value.items()}
 
-            next_state, reward, terminated, truncated, info = env.step(action)
-            done = any(terminated.values()) or any(truncated.values())
-            score += sum([v for v in reward.values()])
+            next_state, rewards, terminations, truncations, infos = env.step(action)
+            done = any(terminations.values()) or any(truncations.values())
+            score += sum([v for v in rewards.values()])
             multiAgents.memory.store(
                 state,
                 action,
                 logprob,
                 value,
                 next_state,
-                reward,
+                rewards,
                 done,
             )
 
             n_steps += 1
             t_step += 1
+            # episode_logger.add_info(infos)
             logger.update_global_step(n_steps)
-            logger.add_dict("rollout/step_reward", reward, n_steps)
+            logger.add_dict("rollout/step_rewards", rewards, n_steps)
 
             if n_steps % training_interval_step == 0:
                 multiAgents.anneal_lr(current_step=learn_iters, total_steps=learn_steps)
                 multiAgents.learn()
+                # eval_logger.evaluate_and_log()
                 learn_iters += 1
             state = next_state
+
+        # episode_logger.record_log()
 
         score_history.append(score)
         avg_score = np.mean(score_history[-10:])
 
         logger.add_scalar("rollout/avg score", avg_score, n_steps)
-        logger.add_scalar("rollout/episode_reward", score / t_step, n_steps)
+        logger.add_scalar("rollout/episode_rewards", score / t_step, n_steps)
         logger.add_scalar("rollout/episode_len", t_step, n_steps)
 
         if avg_score > best_score:
