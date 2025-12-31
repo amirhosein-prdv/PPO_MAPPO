@@ -107,6 +107,8 @@ class StepLogger:
         self.interval = step_interval
         self.step_counter = 0
 
+        self.initialize_buffer()
+
     def initialize_buffer(self) -> None:
         self.metrics_buffer = {
             "reward": {},
