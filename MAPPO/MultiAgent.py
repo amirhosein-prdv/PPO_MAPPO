@@ -1,6 +1,7 @@
 import torch as T
 import numpy as np
-from .utils import Logger, anneal_learning_rate
+from .utils import anneal_learning_rate
+from .logger import Logger
 from typing import List, Optional, Tuple
 
 from pettingzoo import ParallelEnv

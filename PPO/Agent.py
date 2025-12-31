@@ -4,7 +4,8 @@ from typing import Optional, Tuple, List
 
 from .RolloutBuffer import RolloutBuffer
 from .Networks import ActorNetwork, CriticNetwork, ActorCriticNetwork
-from .utils import anneal_learning_rate, Logger
+from .utils import anneal_learning_rate
+from .logger import Logger
 
 
 class Agent:
