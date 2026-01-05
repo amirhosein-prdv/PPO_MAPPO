@@ -1,3 +1,4 @@
+from pyparsing import Optional
 import torch as T
 from torch.utils.tensorboard import SummaryWriter
 from .utils import get_unique_log_dir
@@ -99,12 +100,16 @@ class EvaluationLogger:
 
 class StepLogger:
     def __init__(
-        self, logger: Logger, step_interval=10, suffix_title="step", verbose=0
+        self,
+        logger: Logger,
+        step_interval: Optional[int] = None,
+        suffix_title="eps",
+        verbose=0,
     ):
         self.suffix_title = suffix_title
         self.verbose = verbose
         self.logger = logger
-        self.interval = step_interval
+        self.step_interval = step_interval
         self.step_counter = 0
 
         self.initialize_buffer()
@@ -115,15 +120,18 @@ class StepLogger:
         }
 
     def record_log(self) -> None:
-        if self.step_counter % self.interval == 0:
-            self._log_buffered_metrics()
-            self._reset_buffer()
-            if self.verbose > 0:
-                print("Step metrics logged.")
+        self._log_buffered_metrics()
+        self._reset_buffer()
+        if self.verbose > 0:
+            print("Step metrics logged.")
 
     def add_info(self, info) -> None:
         self.step_counter += 1
         self._buffer_metrics(info)
+
+        if self.step_interval is not None:
+            if self.step_counter % self.step_interval == 0:
+                self.record_log()
 
     def _buffer_metrics(self, info) -> None:
 
@@ -135,9 +143,7 @@ class StepLogger:
             avg_value = sum(self.metrics_buffer["reward"]) / len(
                 self.metrics_buffer["reward"]
             )
-            self.logger.add_scalar(
-                f"reward ({self.interval}-{self.suffix_title})", avg_value
-            )
+            self.logger.add_scalar(f"reward ({self.suffix_title})", avg_value)
 
     def _reset_buffer(self) -> None:
         self.initialize_buffer()
