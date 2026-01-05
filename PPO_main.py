@@ -99,8 +99,8 @@ if __name__ == "__main__":
             logger.update_global_step(n_steps)
             logger.add_scalar("rollout/step_reward", reward, n_steps)
 
-            if truncated:
-                reward += 0.99 * agent.get_value(next_state).item()
+            # if truncated:
+            #     reward += 0.99 * agent.policy.get_value(next_state).detach().item()
 
             agent.memory.store(
                 state,
