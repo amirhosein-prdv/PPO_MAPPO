@@ -21,14 +21,13 @@ class ActorNetwork(nn.Module):
         self,
         state_dim: int,
         action_dim: int,
-        max_action: int,
         actor_lr: float,
         fc_dims: List[int] = [256, 256],
+        log_std_init: float = -0.5,
         chkpt_dir: str = "./tmp/PPO-Agent",
         model_name: str = "actor_torch_ppo",
     ) -> None:
         super(ActorNetwork, self).__init__()
-        self.max_action = max_action
 
         self.initial_lr = actor_lr
         self.checkpoint_file = os.path.join(chkpt_dir, model_name)
@@ -40,19 +39,20 @@ class ActorNetwork(nn.Module):
             layers.append(nn.Tanh())
             in_features = out_features
         layers.append(layer_init(nn.Linear(in_features, action_dim), std=0.01))
-        layers.append(nn.Tanh())
+        # layers.append(nn.Tanh())
 
         self.mean = nn.Sequential(*layers)
-        self.logstd = nn.Parameter(T.zeros(1, action_dim))
-
+        self.logstd = nn.Parameter(
+            T.ones(action_dim) * log_std_init, requires_grad=True
+        )
         self.optimizer = optim.Adam(self.parameters(), lr=actor_lr, eps=1e-5)
         self.device = T.device("cuda:0" if T.cuda.is_available() else "cpu")
         self.to(self.device)
 
     def forward(self, state: T.Tensor) -> Normal:
-        action_mean = self.mean(state) * self.max_action
-        action_logstd = self.logstd.expand_as(action_mean).exp()
-        dist = Normal(action_mean, action_logstd)
+        action_mean = self.mean(state)
+        action_std = T.ones_like(action_mean) * self.logstd.exp()
+        dist = Normal(action_mean, action_std)
         return dist
 
     def save_checkpoint(self) -> None:
@@ -82,7 +82,7 @@ class CriticNetwork(nn.Module):
             layers.append(layer_init(nn.Linear(in_features, out_features)))
             layers.append(nn.Tanh())
             in_features = out_features
-        layers.append(layer_init(nn.Linear(in_features, 1), std=0.01))
+        layers.append(layer_init(nn.Linear(in_features, 1), std=1.0))
 
         self.critic = nn.Sequential(*layers)
 
