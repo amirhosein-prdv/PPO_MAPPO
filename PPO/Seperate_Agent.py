@@ -73,7 +73,7 @@ class Agent:
             critic_lr=lr,
             chkpt_dir=chkpt_dir,
         )
-        self.memory = RolloutBuffer(batch_size)
+        self.memory = RolloutBuffer(batch_size, gamma, gae_lambda)
         self.device = self.actor.device
 
     def anneal_lr(self, current_step: int, total_steps: int) -> None:
