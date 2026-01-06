@@ -29,11 +29,16 @@ class MultiAgent:
         normalize_advantage: bool = True,
         logger: Optional["Logger"] = None,
         chkpt_dir: str = "./tmp/PPO-MultiAgent",
-        policy_kwargs: dict[str, List[int]] = {
+        policy_kwargs: dict[str, dict[str, List[int]]] | dict[str, List[int]] = {
             "feature": [32],
             "pi": [64, 64],
             "vf": [64, 64],
         },
+        # policy_kwargs: dict[str, List[int]] = {
+        #     "feature": [32],
+        #     "pi": [64, 64],
+        #     "vf": [64, 64],
+        # },
     ) -> None:
 
         self.clip_range = clip_range
@@ -50,17 +55,16 @@ class MultiAgent:
         self.possible_agents = env.possible_agents
         self.num_agents = env.num_agents
 
-        feature_net = policy_kwargs["feature"]
-        vf_net = policy_kwargs["vf"]
-        pi_net = policy_kwargs["pi"]
+        if not isinstance(next(iter(policy_kwargs.values())), dict):
+            policy_kwargs = {agent: policy_kwargs for agent in self.possible_agents}
 
         self.agents = {
             agent: ActorCriticNetwork(
                 state_dim=env.observation_space(agent).shape[0],
                 action_dim=env.action_space(agent).shape[0],
-                feature_fc_dims=feature_net,
-                actor_fc_dims=pi_net,
-                critic_fc_dims=vf_net,
+                feature_fc_dims=policy_kwargs[agent]["feature"],
+                actor_fc_dims=policy_kwargs[agent]["pi"],
+                critic_fc_dims=policy_kwargs[agent]["vf"],
                 policy_lr=lr,
                 chkpt_dir=chkpt_dir,
                 model_name=f"ppo-actor-critic_{agent}",
