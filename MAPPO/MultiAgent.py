@@ -1,7 +1,7 @@
 import numpy as np
 import torch as T
 from torch.nn import functional as F
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
 
 from pettingzoo import ParallelEnv
 
@@ -86,6 +86,25 @@ class MultiAgent:
                 current_step,
                 total_steps,
             )
+
+    def get_actions(
+        self, state: dict, deterministic: bool = False
+    ) -> Tuple[dict, dict, dict]:
+        actions = {}
+        logprobs = {}
+        values = {}
+        for agent_name, agent in self.agents.items():
+            actions[agent_name], logprobs[agent_name] = agent.get_action(
+                state[agent_name], deterministic
+            )
+            values[agent_name] = agent.get_value(state[agent_name])
+        return actions, values, logprobs
+
+    def get_values(self, state: dict) -> dict:
+        values = {}
+        for agent_name, agent in self.agents.items():
+            values[agent_name] = agent.get_value(state[agent_name])
+        return values
 
     def eval(self) -> None:
         for agent in self.agents.values():
