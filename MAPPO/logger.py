@@ -3,7 +3,6 @@ from typing import Optional
 from torch.utils.tensorboard import SummaryWriter
 from pettingzoo import ParallelEnv
 
-from .MultiAgent import MultiAgent
 from .utils import get_unique_log_dir
 
 
@@ -57,7 +56,7 @@ class EvaluationLogger:
     def __init__(
         self,
         eval_env: ParallelEnv,
-        multiAgents: MultiAgent,
+        multiAgents,
         logger: Logger,
         eval_episodes=5,
         verbose=0,

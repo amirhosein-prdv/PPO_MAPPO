@@ -34,6 +34,8 @@ if __name__ == "__main__":
     # eval_env = make_env("BipedalWalker-v3")
     # eval_env = eval_env()
 
+    possible_agents = env.possible_agents
+
     episode_num = 4000
     training_interval_step = 200
     timeLimit = env.spec.max_episode_steps
@@ -76,7 +78,7 @@ if __name__ == "__main__":
     for eps in range(episode_num):
         states, infos = env.reset()
         last_done = False
-        last_dones = {agent: False for agent in env.agents}
+        last_dones = {agent: False for agent in possible_agents}
         score = 0
         t_step = 0
         while not last_done:
@@ -85,7 +87,8 @@ if __name__ == "__main__":
             next_states, rewards, terminations, truncations, infos = env.step(actions)
 
             dones = {
-                agent: terminations[agent] or truncations[agent] for agent in env.agents
+                agent: terminations[agent] or truncations[agent]
+                for agent in possible_agents
             }
             done = any(terminations.values()) or any(truncations.values())
             score += sum([v for v in rewards.values()])

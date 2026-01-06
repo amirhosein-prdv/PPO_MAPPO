@@ -54,7 +54,6 @@ class MultiAgentRolloutBuffer:
         action: Dict[str, np.ndarray],
         logprobs: Dict[str, np.ndarray],
         values: Dict[str, np.ndarray],
-        next_state: Dict[str, np.ndarray],
         reward: Dict[str, float],
         done: bool,
     ) -> None:
@@ -63,9 +62,8 @@ class MultiAgentRolloutBuffer:
             self.actions[agent].append(action[agent])
             self.logprobs[agent].append(logprobs[agent])
             self.values[agent].append(values[agent])
-            self.next_states[agent].append(next_state[agent])
             self.rewards[agent].append(reward[agent])
-            self.dones[agent].append(done)
+            self.dones[agent].append(done[agent])
 
     def compute_GAE_and_returns(self, last_value, done):
         self.advantages, self.returns = {}, {}
@@ -79,7 +77,7 @@ class MultiAgentRolloutBuffer:
                     next_non_terminal = 1.0 - float(done[agent])
                     next_val = last_value[agent]
                 else:
-                    next_non_terminal = 1.0 - float(self.dones[t + 1])
+                    next_non_terminal = 1.0 - float(self.dones[agent][t + 1])
                     next_val = self.values[agent][t + 1]
                 delta = (
                     self.rewards[agent][t]
@@ -89,9 +87,9 @@ class MultiAgentRolloutBuffer:
                 last_gae = (
                     delta + self.gamma * self.gae_lambda * next_non_terminal * last_gae
                 )
-                self.advantages[t] = last_gae
+                self.advantages[agent][t] = last_gae
 
-            self.returns = self.advantages + self.values
+            self.returns[agent] = self.advantages[agent] + self.values[agent]
 
     def clear(self) -> None:
         self.states = {agent: [] for agent in self.possible_agents}

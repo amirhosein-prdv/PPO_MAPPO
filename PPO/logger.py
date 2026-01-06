@@ -2,7 +2,6 @@ from pyparsing import Optional
 import torch as T
 from torch.utils.tensorboard import SummaryWriter
 from .utils import get_unique_log_dir
-from .Agent import Agent
 
 
 class Logger:
@@ -55,7 +54,7 @@ class EvaluationLogger:
     def __init__(
         self,
         eval_env,
-        agent: Agent,
+        agent,
         logger: Logger,
         eval_episodes=5,
         verbose=0,
