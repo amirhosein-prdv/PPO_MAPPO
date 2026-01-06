@@ -88,7 +88,7 @@ class EvaluationLogger:
             done = False
 
             while not done:
-                actions, _, _ = self.multiAgents.get_actions(state)
+                actions, _, _ = self.multiAgents.get_actions(state, deterministic=True)
 
                 next_states, rewards, terminations, truncations, infos = (
                     self.eval_env.step(actions)

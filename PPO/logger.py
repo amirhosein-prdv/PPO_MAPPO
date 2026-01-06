@@ -2,6 +2,7 @@ from pyparsing import Optional
 import torch as T
 from torch.utils.tensorboard import SummaryWriter
 from .utils import get_unique_log_dir
+from .Agent import Agent
 
 
 class Logger:
@@ -51,7 +52,14 @@ class Logger:
 
 
 class EvaluationLogger:
-    def __init__(self, eval_env, agent, logger: Logger, eval_episodes=5, verbose=0):
+    def __init__(
+        self,
+        eval_env,
+        agent: Agent,
+        logger: Logger,
+        eval_episodes=5,
+        verbose=0,
+    ):
         """
         Evaluate the model on multiple episodes after each policy update.
 
@@ -77,7 +85,7 @@ class EvaluationLogger:
             done = False
 
             while not done:
-                action, logprob, value = self.agent.get_action(state)
+                action, _, _ = self.agent.policy(state, deterministic=True)
                 next_state, reward, terminated, truncated, info = self.eval_env.step(
                     action
                 )
