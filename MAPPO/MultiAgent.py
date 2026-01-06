@@ -94,16 +94,19 @@ class MultiAgent:
         logprobs = {}
         values = {}
         for agent_name, agent in self.agents.items():
-            actions[agent_name], logprobs[agent_name] = agent.get_action(
-                state[agent_name], deterministic
-            )
-            values[agent_name] = agent.get_value(state[agent_name])
+            act, lp = agent.get_action(state[agent_name], deterministic)
+            val = agent.get_value(state[agent_name])
+            logprobs[agent_name] = lp.detach().cpu().numpy()
+            actions[agent_name] = act.detach().squeeze().cpu().numpy()
+            values[agent_name] = val.detach().squeeze(0).cpu().numpy()
+
         return actions, values, logprobs
 
     def get_values(self, state: dict) -> dict:
         values = {}
         for agent_name, agent in self.agents.items():
-            values[agent_name] = agent.get_value(state[agent_name])
+            val = agent.get_value(state[agent_name])
+            values[agent_name] = val.detach().squeeze(0).cpu().numpy()
         return values
 
     def eval(self) -> None:

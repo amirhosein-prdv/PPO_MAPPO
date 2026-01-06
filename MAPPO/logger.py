@@ -1,7 +1,9 @@
 import torch as T
 from typing import Optional
 from torch.utils.tensorboard import SummaryWriter
+from pettingzoo import ParallelEnv
 
+from .MultiAgent import MultiAgent
 from .utils import get_unique_log_dir
 
 
@@ -54,8 +56,8 @@ class Logger:
 class EvaluationLogger:
     def __init__(
         self,
-        eval_env,
-        multiAgents,
+        eval_env: ParallelEnv,
+        multiAgents: MultiAgent,
         logger: Logger,
         eval_episodes=5,
         verbose=0,
@@ -86,17 +88,14 @@ class EvaluationLogger:
             done = False
 
             while not done:
-                action, _, _ = self.multiAgents.get_action(state)
-                action = {
-                    k: v.detach().cpu().numpy().squeeze() for k, v in action.items()
-                }
+                actions, _, _ = self.multiAgents.get_actions(state)
 
-                next_state, rewards, terminated, truncated, infos = self.eval_env.step(
-                    action
+                next_states, rewards, terminations, truncations, infos = (
+                    self.eval_env.step(actions)
                 )
                 agent = list(infos.keys())[0]
-                done = terminated[agent] or truncated[agent]
-                state = next_state
+                done = terminations[agent] or truncations[agent]
+                state = next_states
 
                 info = infos[agent]  # Assuming all agents share the same info structure
 

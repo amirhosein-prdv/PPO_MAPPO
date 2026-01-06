@@ -82,13 +82,8 @@ if __name__ == "__main__":
         while not last_done:
             multiAgents.eval()
             actions, values, logprobs = multiAgents.get_actions(states)
-            actions = {
-                k: v.detach().squeeze().cpu().numpy() for k, v in actions.items()
-            }
-            logprobs = {k: v.detach().cpu().numpy() for k, v in logprobs.items()}
-            values = {k: v.detach().squeeze(0).cpu().numpy() for k, v in values.items()}
-
             next_states, rewards, terminations, truncations, infos = env.step(actions)
+
             dones = {
                 agent: terminations[agent] or truncations[agent] for agent in env.agents
             }
@@ -113,13 +108,7 @@ if __name__ == "__main__":
             if n_steps % training_interval_step == 0:
                 multiAgents.anneal_lr(current_step=learn_iters, total_steps=learn_steps)
                 last_values = multiAgents.get_values(next_states)
-                last_values = {
-                    k: v.detach().squeeze(0).cpu().numpy()
-                    for k, v in last_values.items()
-                }
-                multiAgents.memory.compute_GAE_and_returns(
-                    last_value=last_values, done=dones
-                )
+                multiAgents.memory.compute_GAE_and_returns(last_values, dones)
                 multiAgents.learn()
                 # eval_logger.evaluate_and_log()
                 learn_iters += 1
