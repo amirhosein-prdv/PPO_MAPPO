@@ -3,15 +3,22 @@ from typing import List, Tuple, Dict
 
 
 class MultiAgentRolloutBuffer:
-    def __init__(self, batch_size: int, possible_agents: List[str]):
+    def __init__(
+        self,
+        batch_size: int,
+        gamma: float,
+        gae_lambda: float,
+        possible_agents: List[str],
+    ):
         self.states = {agent: [] for agent in possible_agents}
         self.actions = {agent: [] for agent in possible_agents}
         self.logprobs = {agent: [] for agent in possible_agents}
         self.values = {agent: [] for agent in possible_agents}
-        self.next_states = {agent: [] for agent in possible_agents}
         self.rewards = {agent: [] for agent in possible_agents}
         self.dones = {agent: [] for agent in possible_agents}
 
+        self.gamma = gamma
+        self.gae_lambda = gae_lambda
         self.batch_size: int = batch_size
         self.possible_agents: List[str] = possible_agents
 
@@ -31,16 +38,14 @@ class MultiAgentRolloutBuffer:
         List[np.ndarray],
         List[np.ndarray],
         List[np.ndarray],
-        List[np.ndarray],
     ]:
         return (
             np.array(self.states[agent]),
             np.array(self.actions[agent]),
             np.array(self.logprobs[agent]),
             np.array(self.values[agent]),
-            np.array(self.next_states[agent]),
-            np.array(self.rewards[agent]),
-            np.array(self.dones[agent]),
+            np.array(self.advantages[agent]),
+            np.array(self.returns[agent]),
         )
 
     def store(
@@ -62,11 +67,36 @@ class MultiAgentRolloutBuffer:
             self.rewards[agent].append(reward[agent])
             self.dones[agent].append(done)
 
+    def compute_GAE_and_returns(self, last_value, done):
+        self.advantages, self.returns = {}, {}
+        for agent in self.possible_agents:
+            self.advantages[agent] = np.zeros_like(self.values[agent], dtype=np.float32)
+            self.returns[agent] = np.zeros_like(self.values[agent], dtype=np.float32)
+
+            last_gae = 0
+            for t in reversed(range(len(self.rewards[agent]))):
+                if t == len(self.rewards[agent]) - 1:
+                    next_non_terminal = 1.0 - float(done[agent])
+                    next_val = last_value[agent]
+                else:
+                    next_non_terminal = 1.0 - float(self.dones[t + 1])
+                    next_val = self.values[agent][t + 1]
+                delta = (
+                    self.rewards[agent][t]
+                    + self.gamma * next_val * next_non_terminal
+                    - self.values[agent][t]
+                )
+                last_gae = (
+                    delta + self.gamma * self.gae_lambda * next_non_terminal * last_gae
+                )
+                self.advantages[t] = last_gae
+
+            self.returns = self.advantages + self.values
+
     def clear(self) -> None:
         self.states = {agent: [] for agent in self.possible_agents}
         self.actions = {agent: [] for agent in self.possible_agents}
         self.logprobs = {agent: [] for agent in self.possible_agents}
         self.values = {agent: [] for agent in self.possible_agents}
-        self.next_states = {agent: [] for agent in self.possible_agents}
         self.rewards = {agent: [] for agent in self.possible_agents}
         self.dones = {agent: [] for agent in self.possible_agents}
