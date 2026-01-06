@@ -1,4 +1,5 @@
 import torch as T
+from typing import Optional
 from torch.utils.tensorboard import SummaryWriter
 
 from .utils import get_unique_log_dir
@@ -77,16 +78,6 @@ class EvaluationLogger:
         metrics_buffer = {
             "reward": [],
             "rewards": {},
-            "R_p_k": {},
-            "R_c_k": {},
-            "L_t": {},
-            "var": {},
-            "C_k": {},
-            "downlinkPower_k": {},
-            "objective": [],
-            "agent_objective": {},
-            "power_consuming": [],
-            "constraints_error": {},
         }
 
         self.multiAgents.eval()
@@ -114,59 +105,6 @@ class EvaluationLogger:
                 for k, v in rewards.items():
                     metrics_buffer["rewards"].setdefault(k, []).append(v)
 
-                # Collect metrics from the 'info' dictionary
-                if "R_p_k" in info:
-                    for key, value in info["R_p_k"].items():
-                        for key_, value_ in value.items():
-                            for user, Rate in enumerate(value_):
-                                metrics_buffer["R_p_k"].setdefault(
-                                    (key, key_, user), []
-                                ).append(Rate)
-
-                if "R_c_k" in info:
-                    for key, value in info["R_c_k"].items():
-                        for key_, value_ in value.items():
-                            for user, Rate in enumerate(value_):
-                                metrics_buffer["R_c_k"].setdefault(
-                                    (key, key_, user), []
-                                ).append(Rate)
-
-                if "L_t" in info:
-                    for key, value in enumerate(info["L_t"]):
-                        metrics_buffer["L_t"].setdefault(key, []).append(value[0])
-
-                if "var" in info:
-                    for key, value in info["var"].items():
-                        metrics_buffer["var"].setdefault(key, []).append(value[0])
-
-                if "C_k" in info:
-                    for key, value in enumerate(info["C_k"]):
-                        metrics_buffer["C_k"].setdefault(key, []).append(value)
-
-                if "downlinkPower_k" in info:
-                    for key, value in enumerate(info["downlinkPower_k"]):
-                        metrics_buffer["downlinkPower_k"].setdefault(key, []).append(
-                            value
-                        )
-
-                if "objective" in info:
-                    metrics_buffer["objective"].append(info["objective"])
-
-                if "power_consuming" in info:
-                    metrics_buffer["power_consuming"].append(info["power_consuming"][0])
-
-                if "constraints_error" in info:
-                    for key, value in info["constraints_error"].items():
-                        metrics_buffer["constraints_error"].setdefault(key, []).append(
-                            value
-                        )
-
-                if "agent_objective" in info:
-                    for key, value in info["agent_objective"].items():
-                        metrics_buffer["agent_objective"].setdefault(key, []).append(
-                            value
-                        )
-
         # Compute averages and log them
         rew = sum(metrics_buffer["reward"]) / len(metrics_buffer["reward"])
         self.logger.add_scalar("reward (eval)", rew)
@@ -174,69 +112,22 @@ class EvaluationLogger:
         for k, v in metrics_buffer["rewards"].items():
             self.logger.add_scalar(f"reward {k} (eval)", sum(v) / len(v))
 
-        if "R_p_k" in metrics_buffer:
-            for (key, key_, user), values in metrics_buffer["R_p_k"].items():
-                avg_value = sum(values) / len(values)
-                self.logger.add_scalar(
-                    f"R_p_k (eval)/{key}/RIS_{key_}/{user+1}", avg_value
-                )
-
-        if "R_c_k" in metrics_buffer:
-            for (key, key_, user), values in metrics_buffer["R_c_k"].items():
-                avg_value = sum(values) / len(values)
-                self.logger.add_scalar(
-                    f"R_c_k (eval)/{key}/RIS_{key_}/{user+1}", avg_value
-                )
-
-        if "L_t" in metrics_buffer:
-            for key, value in metrics_buffer["L_t"].items():
-                avg_L_t = sum(value) / len(value)
-                self.logger.add_scalar(f"L_t (eval)/{key}", avg_L_t)
-
-        if "var" in metrics_buffer:
-            for key, values in metrics_buffer["var"].items():
-                avg_value = sum(values) / len(values)
-                self.logger.add_scalar(f"var (eval)/{key}", avg_value)
-
-        if "C_k" in metrics_buffer:
-            for key, value in metrics_buffer["C_k"].items():
-                avg_C_k = sum(value) / len(value)
-                self.logger.add_scalar(f"C_k (eval)/{key}", avg_C_k)
-
-        if "objective" in metrics_buffer:
-            avg_objective = sum(metrics_buffer["objective"]) / len(
-                metrics_buffer["objective"]
-            )
-            self.logger.add_scalar("objective (eval)", avg_objective)
-
-        if "power_consuming" in metrics_buffer:
-            avg_power_consuming = sum(metrics_buffer["power_consuming"]) / len(
-                metrics_buffer["power_consuming"]
-            )
-            self.logger.add_scalar("power_consuming (eval)", avg_power_consuming)
-
-        if "constraints_error" in metrics_buffer:
-            for key, values in metrics_buffer["constraints_error"].items():
-                avg_value = sum(values) / len(values)
-                self.logger.add_scalar(f"constraints_error (eval)/{key}", avg_value)
-
-        if "agent_objective" in metrics_buffer:
-            for key, values in metrics_buffer["agent_objective"].items():
-                avg_value = sum(values) / len(values)
-                self.logger.add_scalar(f"agent_objective (eval)/{key}", avg_value)
-
         if self.verbose > 0:
             print("Evaluation metrics logged.")
 
 
 class StepLogger:
     def __init__(
-        self, logger: Logger, step_interval=10, suffix_title="step", verbose=0
+        self,
+        logger: Logger,
+        step_interval: Optional[int] = None,
+        suffix_title="step",
+        verbose=0,
     ):
         self.suffix_title = suffix_title
         self.verbose = verbose
         self.logger = logger
-        self.interval = step_interval
+        self.step_interval = step_interval
         self.step_counter = 0
 
         self.initialize_buffer()
@@ -248,17 +139,20 @@ class StepLogger:
         }
 
     def record_log(self) -> None:
-        if self.step_counter % self.interval == 0:
-            self._log_buffered_metrics()
-            self._reset_buffer()
-            if self.verbose > 0:
-                print("Step metrics logged.")
+        self._log_buffered_metrics()
+        self._reset_buffer()
+        if self.verbose > 0:
+            print("Step metrics logged.")
 
     def add_info(self, infos) -> None:
         self.step_counter += 1
         agent = list(infos.keys())[0]
         info = infos[agent]  # Assuming all agents share the same info structure
         self._buffer_metrics(info)
+
+        if self.step_interval is not None:
+            if self.step_counter % self.step_interval == 0:
+                self.record_log()
 
     def _buffer_metrics(self, info) -> None:
 
@@ -280,7 +174,7 @@ class StepLogger:
                 self.metrics_buffer["reward"]
             )
             self.logger.add_scalar(
-                f"reward ({self.interval}-{self.suffix_title})", avg_value
+                f"reward ({self.step_interval}-{self.suffix_title})", avg_value
             )
 
     def _reset_buffer(self) -> None:
